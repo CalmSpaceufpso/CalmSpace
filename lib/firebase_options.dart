@@ -84,3 +84,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'calmspace-29937.firebasestorage.app',
   );
 }
+
