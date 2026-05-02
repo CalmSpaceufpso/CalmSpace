@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'screens/register/register_screen.dart'; // Llama a tu pantalla de registro
+import 'screens/register_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,15 +16,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Aquí está el MaterialApp que faltaba
     return MaterialApp(
       title: 'CalmSpace',
-      debugShowCheckedModeBanner: false, // Esto quita la rayita roja de "DEBUG"
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2B3DB6)),
         useMaterial3: true,
       ),
-      home: const RegisterScreen(), // Tu pantalla de registro
+      home: const RegisterScreen(),
+      routes: {
+        '/register': (context) => const RegisterScreen(),
+      },
     );
   }
 }
