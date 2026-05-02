@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class RegisterScreen extends StatefulWidget {
   final FirebaseAuth? auth;
@@ -15,469 +13,616 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  // ── COLORES ────────────────────────────────────────────────────────────────
+  static const Color _primary    = Color(0xFF2563EB);
+  static const Color _background = Color(0xFFF0F2F5);
+  static const Color _textMain   = Color(0xFF111827);
+  static const Color _textSub    = Color(0xFF9E9E9E);
+
+  // ── FORM ──────────────────────────────────────────────────────────────────
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final _nameCtrl     = TextEditingController();
+  final _emailCtrl    = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  final _phoneCtrl    = TextEditingController();
+  final _birthCtrl    = TextEditingController();
+  final _yearsCtrl    = TextEditingController();
+  final _descCtrl     = TextEditingController();
 
-  bool _isLoading = false;
-  bool _acceptedTerms = false; // NUEVO: Estado para el checkbox de términos
-  bool _obscurePassword = true;
+  bool _isLoading      = false;
+  bool _obscurePass    = true;
+  bool _acceptedTerms  = false;
 
-  // Colores extraídos del mockup para mantener consistencia
-  final Color _primaryBlue = const Color(0xFF1D3DB6); // Azul principal (títulos, botones)
-  final Color _lightBgColor = const Color(0xFFF3F5FC); // Fondo claro de los inputs
-  final Color _textColor = const Color(0xFF1E1E1E); // Texto oscuro
+  // Rol y campos por rol
+  String  _selectedRole     = 'Paciente';
+  String? _selectedGender;
+  String? _selectedSpecialty;
+  String? _selectedModality;
 
+  static const List<String> _genders = [
+    'Masculino', 'Femenino', 'No binario', 'Prefiero no decirlo',
+  ];
+  static const List<String> _specialties = [
+    'Psicología Clínica', 'Psicología Infantil', 'Psicología Familiar',
+    'Psicología Cognitivo-Conductual', 'Psicología Humanista',
+    'Neuropsicología', 'Otra',
+  ];
+  static const List<String> _modalities = [
+    'Presencial', 'Virtual', 'Híbrida',
+  ];
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose(); _emailCtrl.dispose(); _passwordCtrl.dispose();
+    _phoneCtrl.dispose(); _birthCtrl.dispose();
+    _yearsCtrl.dispose(); _descCtrl.dispose();
+    super.dispose();
+  }
+
+  // ── REGISTRO ───────────────────────────────────────────────────────────────
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
-
-    // Validación del checkbox de términos y condiciones
     if (!_acceptedTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Debes aceptar los Términos y Condiciones para continuar.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showError('Debes aceptar los Términos y Condiciones para continuar.');
       return;
     }
 
     setState(() => _isLoading = true);
-
     try {
-      final authInstance = widget.auth ?? FirebaseAuth.instance;
-      final firestoreInstance = widget.firestore ?? FirebaseFirestore.instance;
+      final auth      = widget.auth      ?? FirebaseAuth.instance;
+      final firestore = widget.firestore ?? FirebaseFirestore.instance;
+      final isPsi     = _selectedRole == 'Psicólogo';
 
-      // 1. Crear usuario en Firebase Auth
-      UserCredential userCredential = await authInstance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+      final cred = await auth.createUserWithEmailAndPassword(
+        email: _emailCtrl.text.trim(),
+        password: _passwordCtrl.text.trim(),
       );
+      await cred.user!.updateDisplayName(_nameCtrl.text.trim());
 
-      // 2. Guardar nombre en Authentication
-      await userCredential.user!.updateDisplayName(_nameController.text.trim());
+      final Map<String, dynamic> userData = {
+        'name'      : _nameCtrl.text.trim(),
+        'email'     : cred.user!.email,
+        'role'      : _selectedRole,
+        'status'    : isPsi ? 'pendiente' : 'activo',
+        'createdAt' : FieldValue.serverTimestamp(),
+      };
 
-      // 3. Guardar datos adicionales en Firestore
-      await firestoreInstance.collection('users').doc(userCredential.user!.uid).set({
-        'name': _nameController.text.trim(),
-        'email': userCredential.user!.email,
-        'role': 'User',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('¡Cuenta creada con éxito! Bienvenido a CalmSpace'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      Navigator.pushReplacementNamed(context, '/home');
-
-    } on FirebaseAuthException catch (e) {
-      String errorMsg = 'Ocurrió un error inesperado';
-
-      if (e.code == 'weak-password') {
-        errorMsg = 'La contraseña es muy débil.';
-      } else if (e.code == 'email-already-in-use') {
-        errorMsg = 'Ya existe una cuenta con este correo.';
-      } else if (e.code == 'invalid-email') {
-        errorMsg = 'El formato del correo no es válido.';
-      } else if (e.code == 'too-many-requests') {
-        errorMsg = 'Demasiados intentos. Intenta más tarde.';
+      if (!isPsi) {
+        // Datos paciente
+        if (_selectedGender != null) userData['gender']    = _selectedGender;
+        if (_phoneCtrl.text.isNotEmpty) userData['phone']  = _phoneCtrl.text.trim();
+        if (_birthCtrl.text.isNotEmpty) userData['birthDate'] = _birthCtrl.text.trim();
+      } else {
+        // Datos psicólogo
+        if (_selectedSpecialty != null) userData['specialty'] = _selectedSpecialty;
+        if (_yearsCtrl.text.isNotEmpty) userData['experienceYears'] = int.tryParse(_yearsCtrl.text.trim());
+        if (_selectedModality != null)  userData['modality']  = _selectedModality;
+        if (_descCtrl.text.isNotEmpty)  userData['description'] = _descCtrl.text.trim();
       }
 
+      await firestore.collection('users').doc(cred.user!.uid).set(userData);
+
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
+        const SnackBar(content: Text('¡Cuenta creada! Bienvenido a CalmSpace'), backgroundColor: _primary),
       );
+      Navigator.pushReplacementNamed(context, isPsi ? '/pending' : '/home');
 
+    } on FirebaseAuthException catch (e) {
+      final msg = switch (e.code) {
+        'weak-password'       => 'La contraseña es muy débil (mínimo 6 caracteres).',
+        'email-already-in-use'=> 'Ya existe una cuenta con este correo.',
+        'invalid-email'       => 'El formato del correo no es válido.',
+        'too-many-requests'   => 'Demasiados intentos. Intenta más tarde.',
+        _                     => 'Ocurrió un error inesperado.',
+      };
+      _showError(msg);
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-      );
+      _showError('Error: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // GOOGLE SIGN-IN
-  Future<UserCredential?> signInWithGoogle() async {
-    try {
-      final GoogleSignIn googleSignIn = GoogleSignIn();
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+  void _showError(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: Colors.redAccent),
+    );
+  }
 
-      if (googleUser == null) return null;
-
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final authInstance = widget.auth ?? FirebaseAuth.instance;
-      return await authInstance.signInWithCredential(credential);
-    } on FirebaseAuthException catch (e) {
-      debugPrint("Error: ${e.message}");
-      return null;
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(now.year - 20),
+      firstDate: DateTime(1940),
+      lastDate: DateTime(now.year - 10),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(primary: _primary),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) {
+      _birthCtrl.text =
+          '${picked.day.toString().padLeft(2, '0')} / ${picked.month.toString().padLeft(2, '0')} / ${picked.year}';
     }
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  // Widget reutilizable para los campos de texto según el diseño del mockup
-  // Esto evita tener código repetitivo (código espagueti) en el método build.
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hintText,
-    bool isPassword = false,
-    String? Function(String?)? validator,
-    Widget? suffixIcon,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: TextFormField(
-        controller: controller,
-        obscureText: isPassword,
-        validator: validator,
-        decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: TextStyle(color: Colors.grey.shade600),
-          filled: true,
-          fillColor: _lightBgColor,
-          suffixIcon: suffixIcon,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide.none, // Sin borde por defecto, igual al mockup
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide.none, // Aseguramos que no haya borde en reposo
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: _primaryBlue, width: 1.5), // Borde azul al enfocar
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Colors.red, width: 1.5),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Widget reutilizable para los botones sociales (Google, Facebook)
-  Widget _buildSocialButton({
-    String? iconPath,
-    IconData? iconData,
-    Color? bgColor,
-    Color? iconColor,
-    double iconSize = 30,
-    required VoidCallback onPressed,
-  }) {
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        width: 60,
-        height: 60,
-        decoration: BoxDecoration(
-          color: bgColor ?? const Color(0xFFEBEBEB), // Fondo gris claro del mockup
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Center(
-          child: iconData != null
-              ? Icon(iconData, color: iconColor ?? Colors.black, size: iconSize)
-              : Image.network(
-                  iconPath!,
-                  width: iconSize,
-                  height: iconSize,
-                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.error),
-                ),
-        ),
-      ),
-    );
-  }
-
+  // ── BUILD ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: Theme.of(context).copyWith(
-        textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
+    final isPsi = _selectedRole == 'Psicólogo';
+
+    return Scaffold(
+      backgroundColor: _background,
+      appBar: AppBar(
+        backgroundColor: _background,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: _textMain),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Crear cuenta',
+          style: TextStyle(color: _textMain, fontWeight: FontWeight.bold, fontSize: 17),
+        ),
+        centerTitle: true,
       ),
-      child: Scaffold(
-        backgroundColor: Colors.white, // Fondo blanco según el mockup
-      body: Stack(
-        children: [
-          // FONDO DECORATIVO
-          Positioned.fill(
-            child: CustomPaint(
-              painter: BackgroundPainter(),
-            ),
-          ),
-          SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 20.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // TÍTULO
-                      Text(
-                        'Crear cuenta',
-                        style: TextStyle(
-                          fontSize: 36, // Ajustado a 36 según mockup
-                          fontWeight: FontWeight.w900,
-                          color: _primaryBlue,
-                        ),
-                      ),
-                      const SizedBox(height: 8), // Ajustado a 8 según mockup
-                      
-                      // SUBTÍTULO
-                      Text(
-                        'Crea una cuenta y da el primer paso para\nsentirte mejor',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: _textColor,
-                          height: 1.4,
-                        ),
-                      ),
-                      const SizedBox(height: 50), // Ajustado a 50 según mockup
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
 
-                  // CAMPO: NOMBRE COMPLETO
-                  _buildTextField(
-                    controller: _nameController,
-                    hintText: 'Nombre Completo',
-                    validator: (value) => value!.isEmpty ? 'Ingresa tu nombre' : null,
+              // ── SELECTOR DE ROL ────────────────────────────────
+              const Text(
+                '¿Cómo quieres usar CalmSpace?',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _textMain),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  _RoleCard(
+                    label: 'Soy Paciente',
+                    icon: Icons.self_improvement_rounded,
+                    selected: _selectedRole == 'Paciente',
+                    onTap: () => setState(() => _selectedRole = 'Paciente'),
                   ),
-                  const SizedBox(height: 20),
-
-                  // CAMPO: CORREO ELECTRÓNICO
-                  _buildTextField(
-                    controller: _emailController,
-                    hintText: 'Correo Electrónico',
-                    validator: (value) {
-                      if (value == null || value.isEmpty) return 'Ingresa tu correo';
-                      if (!value.contains('@')) return 'Correo inválido';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 20),
-
-                  // CAMPO: CONTRASEÑA
-                  _buildTextField(
-                    controller: _passwordController,
-                    hintText: 'Contraseña',
-                    isPassword: _obscurePassword,
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                        color: Colors.grey,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                    ),
-                    validator: (value) => value!.length < 6 ? 'Mínimo 6 caracteres' : null,
-                  ),
-                  const SizedBox(height: 15),
-
-                  // CHECKBOX TÉRMINOS Y CONDICIONES
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: Checkbox(
-                          value: _acceptedTerms,
-                          activeColor: _primaryBlue,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                          onChanged: (value) {
-                            setState(() {
-                              _acceptedTerms = value ?? false;
-                            });
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: RichText(
-                          text: TextSpan(
-                            text: 'Al marcar esta casilla, aceptas nuestros ',
-                            style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
-                            children: [
-                              TextSpan(
-                                text: 'Términos',
-                                style: TextStyle(color: _primaryBlue, fontWeight: FontWeight.bold),
-                              ),
-                              const TextSpan(text: ' y '),
-                              TextSpan(
-                                text: 'Condiciones',
-                                style: TextStyle(color: _primaryBlue, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 30),
-
-                  // BOTÓN REGÍSTRATE
-                  SizedBox(
-                    width: double.infinity,
-                    height: 55, // Altura prominente como en el mockup
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _register,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _primaryBlue,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: _isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                              'Regístrate',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 25),
-
-                  // ENLACE: ¿YA TIENES UNA CUENTA?
-                  GestureDetector(
-                    onTap: () => Navigator.pushReplacementNamed(context, '/login'),
-                    child: Text(
-                      '¿Ya tienes una cuenta?',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey.shade800,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-
-                  // DIVISOR: O BIEN, CONTINÚA CON
-                  Text(
-                    'O bien, continúa con',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: _primaryBlue,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // BOTONES SOCIALES (Google y Facebook)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildSocialButton(
-                        // Ícono de Google
-                        iconPath: 'https://cdn-icons-png.flaticon.com/512/2991/2991148.png', 
-                        onPressed: signInWithGoogle,
-                      ),
-                      const SizedBox(width: 20),
-                      _buildSocialButton(
-                        // Ícono de Facebook oficial
-                        iconData: Icons.facebook,
-                        bgColor: const Color(0xFF1877F2),
-                        iconColor: Colors.white,
-                        iconSize: 28,
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Login con Facebook próximamente')),
-                          );
-                        },
-                      ),
-                    ],
+                  const SizedBox(width: 12),
+                  _RoleCard(
+                    label: 'Soy Psicólogo',
+                    icon: Icons.psychology_outlined,
+                    selected: _selectedRole == 'Psicólogo',
+                    onTap: () => setState(() => _selectedRole = 'Psicólogo'),
                   ),
                 ],
               ),
-            ),
+
+              if (isPsi) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFFCC02)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Color(0xFFE65100), size: 18),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Tu perfil será revisado por un administrador antes de activarse.',
+                          style: TextStyle(fontSize: 12, color: Color(0xFF5D4037)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 24),
+              _sectionLabel('Información básica'),
+
+              // ── CAMPOS COMUNES ─────────────────────────────────
+              _CardField(
+                label: 'Nombre completo',
+                controller: _nameCtrl,
+                prefixIcon: Icons.person_outline,
+                validator: (v) => v!.trim().isEmpty ? 'Requerido' : null,
+              ),
+              _CardField(
+                label: 'Correo electrónico',
+                controller: _emailCtrl,
+                prefixIcon: Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
+                validator: (v) {
+                  if (v!.trim().isEmpty) return 'Requerido';
+                  if (!v.contains('@')) return 'Correo inválido';
+                  return null;
+                },
+              ),
+              _CardField(
+                label: 'Contraseña',
+                controller: _passwordCtrl,
+                prefixIcon: Icons.lock_outline,
+                obscureText: _obscurePass,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePass ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    color: _textSub, size: 20,
+                  ),
+                  onPressed: () => setState(() => _obscurePass = !_obscurePass),
+                ),
+                validator: (v) {
+                  if (v!.isEmpty) return 'Requerido';
+                  if (v.length < 6) return 'Mínimo 6 caracteres';
+                  return null;
+                },
+              ),
+
+              const SizedBox(height: 8),
+
+              // ── CAMPOS PACIENTE ────────────────────────────────
+              if (!isPsi) ...[
+                _sectionLabel('Sobre ti'),
+                _DropdownField(
+                  label: 'Género',
+                  value: _selectedGender,
+                  items: _genders,
+                  onChanged: (v) => setState(() => _selectedGender = v),
+                ),
+                _CardField(
+                  label: 'Fecha de nacimiento',
+                  controller: _birthCtrl,
+                  prefixIcon: Icons.calendar_today_outlined,
+                  readOnly: true,
+                  hint: 'DD / MM / AAAA',
+                  suffixIcon: const Icon(Icons.chevron_right, color: _textSub, size: 20),
+                  onTap: _pickDate,
+                ),
+                _CardField(
+                  label: 'Teléfono (opcional)',
+                  controller: _phoneCtrl,
+                  prefixIcon: Icons.phone_outlined,
+                  keyboardType: TextInputType.phone,
+                  hint: '(55) 1234 5678',
+                ),
+              ],
+
+              // ── CAMPOS PSICÓLOGO ───────────────────────────────
+              if (isPsi) ...[
+                _sectionLabel('Información profesional'),
+                _DropdownField(
+                  label: 'Especialidad *',
+                  value: _selectedSpecialty,
+                  items: _specialties,
+                  onChanged: (v) => setState(() => _selectedSpecialty = v),
+                  validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null,
+                ),
+                _CardField(
+                  label: 'Años de experiencia *',
+                  controller: _yearsCtrl,
+                  prefixIcon: Icons.work_outline,
+                  keyboardType: TextInputType.number,
+                  validator: (v) {
+                    if (v!.isEmpty) return 'Requerido';
+                    if (int.tryParse(v) == null) return 'Debe ser un número';
+                    return null;
+                  },
+                ),
+                _DropdownField(
+                  label: 'Modalidad de atención *',
+                  value: _selectedModality,
+                  items: _modalities,
+                  onChanged: (v) => setState(() => _selectedModality = v),
+                  validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null,
+                ),
+                _CardField(
+                  label: 'Descripción profesional (opcional)',
+                  controller: _descCtrl,
+                  prefixIcon: Icons.description_outlined,
+                  maxLines: 3,
+                  maxLength: 300,
+                  hint: 'Cuéntanos sobre tu enfoque terapéutico...',
+                ),
+              ],
+
+              const SizedBox(height: 8),
+
+              // ── TÉRMINOS Y CONDICIONES ─────────────────────────
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 24, height: 24,
+                    child: Checkbox(
+                      value: _acceptedTerms,
+                      onChanged: (v) => setState(() => _acceptedTerms = v ?? false),
+                      activeColor: _primary,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _acceptedTerms = !_acceptedTerms),
+                      child: const Text.rich(
+                        TextSpan(
+                          text: 'Acepto los ',
+                          style: TextStyle(fontSize: 13, color: _textSub),
+                          children: [
+                            TextSpan(
+                              text: 'Términos y Condiciones',
+                              style: TextStyle(color: _primary, fontWeight: FontWeight.w600),
+                            ),
+                            TextSpan(text: ' y la '),
+                            TextSpan(
+                              text: 'Política de Privacidad',
+                              style: TextStyle(color: _primary, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // ── BOTÓN REGISTRAR ────────────────────────────────
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _register,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _primary,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 22, height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                        )
+                      : const Text(
+                          'Crear cuenta',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // ── YA TENGO CUENTA ────────────────────────────────
+              Center(
+                child: GestureDetector(
+                  onTap: () => Navigator.pushReplacementNamed(context, '/login'),
+                  child: const Text.rich(
+                    TextSpan(
+                      text: '¿Ya tienes cuenta? ',
+                      style: TextStyle(color: _textSub, fontSize: 14),
+                      children: [
+                        TextSpan(
+                          text: 'Inicia sesión',
+                          style: TextStyle(color: _primary, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              if (isPsi) ...[
+                const SizedBox(height: 8),
+                const Center(
+                  child: Text(
+                    '(*) Campo obligatorio',
+                    style: TextStyle(color: _textSub, fontSize: 12),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 28),
+            ],
           ),
         ),
       ),
-    ],
+    );
+  }
+
+  Widget _sectionLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: _textSub,
+          letterSpacing: 0.5,
         ),
       ),
     );
   }
 }
 
-// CustomPainter para el fondo con líneas curvas suaves y abstractas
-class BackgroundPainter extends CustomPainter {
+// ── TARJETA DE ROL ────────────────────────────────────────────────────────────
+class _RoleCard extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  static const Color _primary = Color(0xFF2563EB);
+
+  const _RoleCard({
+    required this.label, required this.icon,
+    required this.selected, required this.onTap,
+  });
+
   @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFFE8EAF6) // Gris muy claro
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-
-    final path1 = Path();
-    // Línea curva superior izquierda
-    path1.moveTo(0, size.height * 0.15);
-    path1.quadraticBezierTo(size.width * 0.1, size.height * 0.3, size.width * 0.3, 0);
-
-    final path2 = Path();
-    // Línea cruzando sutilmente la izquierda
-    path2.moveTo(0, size.height * 0.4);
-    path2.quadraticBezierTo(size.width * 0.2, size.height * 0.5, size.width * 0.4, size.height);
-
-    final path3 = Path();
-    // Línea inferior izquierda sutil
-    path3.moveTo(0, size.height * 0.7);
-    path3.quadraticBezierTo(size.width * 0.15, size.height * 0.8, size.width * 0.3, size.height);
-
-    final path4 = Path();
-    // Línea sutil cruzando hacia la derecha
-    path4.moveTo(size.width * 0.8, 0);
-    path4.quadraticBezierTo(size.width, size.height * 0.2, size.width * 0.9, size.height * 0.4);
-
-    canvas.drawPath(path1, paint);
-    canvas.drawPath(path2, paint);
-    canvas.drawPath(path3, paint);
-    canvas.drawPath(path4, paint);
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFFEEF3FF) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected ? _primary : Colors.grey.shade300,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, size: 28, color: selected ? _primary : Colors.grey),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? _primary : Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
+}
+
+// ── CAMPO TIPO TARJETA ─────────────────────────────────────────────────────────
+class _CardField extends StatelessWidget {
+  final String label;
+  final TextEditingController? controller;
+  final bool readOnly;
+  final bool obscureText;
+  final TextInputType? keyboardType;
+  final int? maxLines;
+  final int? maxLength;
+  final String? hint;
+  final IconData? prefixIcon;
+  final Widget? suffixIcon;
+  final VoidCallback? onTap;
+  final String? Function(String?)? validator;
+
+  static const Color _primary = Color(0xFF2563EB);
+  static const Color _textSub = Color(0xFF9E9E9E);
+
+  const _CardField({
+    required this.label,
+    this.controller,
+    this.readOnly = false,
+    this.obscureText = false,
+    this.keyboardType,
+    this.maxLines = 1,
+    this.maxLength,
+    this.hint,
+    this.prefixIcon,
+    this.suffixIcon,
+    this.onTap,
+    this.validator,
+  });
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: TextFormField(
+        controller: controller,
+        readOnly: readOnly,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        maxLines: obscureText ? 1 : maxLines,
+        maxLength: maxLength,
+        onTap: onTap,
+        validator: validator,
+        style: const TextStyle(fontSize: 15, color: Color(0xFF111827), fontWeight: FontWeight.w500),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: _textSub, fontSize: 12),
+          hintText: hint,
+          hintStyle: const TextStyle(color: Color(0xFFCCCCCC), fontSize: 15),
+          prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: _primary, size: 20) : null,
+          suffixIcon: suffixIcon,
+          border: InputBorder.none,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          counterText: '',
+        ),
+      ),
+    );
+  }
+}
+
+// ── DROPDOWN TIPO TARJETA ──────────────────────────────────────────────────────
+class _DropdownField extends StatelessWidget {
+  final String label;
+  final String? value;
+  final List<String> items;
+  final ValueChanged<String?> onChanged;
+  final String? Function(String?)? validator;
+
+  static const Color _primary = Color(0xFF2563EB);
+  static const Color _textSub = Color(0xFF9E9E9E);
+
+  const _DropdownField({
+    required this.label, required this.value,
+    required this.items, required this.onChanged, this.validator,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: DropdownButtonFormField<String>(
+        value: value,
+        isExpanded: true,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: _primary, fontSize: 12),
+          border: InputBorder.none,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+        ),
+        icon: const Icon(Icons.keyboard_arrow_down, color: _textSub),
+        items: items
+            .map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 15))))
+            .toList(),
+        onChanged: onChanged,
+        validator: validator,
+      ),
+    );
+  }
 }
