@@ -4,7 +4,7 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:calm_space/screens/register_screen.dart';
+import 'package:calm_space/screens/register/register_screen.dart';
 
 @GenerateMocks([
   FirebaseAuth,
