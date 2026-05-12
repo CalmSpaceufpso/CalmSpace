@@ -1,337 +1,324 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-  Future<void> _logout(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
-    // El StreamBuilder en main.dart redirige automáticamente a LoginScreen
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  // ── PALETA ───────────────────────────────────────────────────────────────────
+  static const Color _primary   = Color(0xFF1D35B4);
+  static const Color _bg        = Color(0xFFF4F6FB);
+  static const Color _textMain  = Color(0xFF1E293B);
+  static const Color _textSub   = Color(0xFF64748B);
+  static const Color _cardBg    = Colors.white;
+
+  String _nombre  = 'Usuario';
+  String _inicial = 'U';
+  String _role    = 'Paciente';
+  bool   _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    _nombre  = user.displayName ?? user.email ?? 'Usuario';
+    _inicial = _nombre.isNotEmpty ? _nombre[0].toUpperCase() : 'U';
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      if (doc.exists && mounted) {
+        final data = doc.data()!;
+        setState(() {
+          _role    = data['role'] ?? 'Paciente';
+          _nombre  = data['name'] ?? _nombre;
+          _inicial = _nombre.isNotEmpty ? _nombre[0].toUpperCase() : 'U';
+          _loading = false;
+        });
+      } else {
+        if (mounted) setState(() => _loading = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _logout() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Cerrar sesión',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text('¿Estás seguro que deseas cerrar sesión?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar', style: TextStyle(color: _textSub)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Salir',
+                style: TextStyle(
+                    color: Colors.redAccent, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) await FirebaseAuth.instance.signOut();
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    final String nombre = user?.displayName ?? user?.email ?? 'Usuario';
-    final String inicial = nombre.isNotEmpty ? nombre[0].toUpperCase() : 'U';
+    if (_loading) {
+      return const Scaffold(
+        backgroundColor: _bg,
+        body: Center(child: CircularProgressIndicator(color: _primary)),
+      );
+    }
 
-    // Paleta de salud mental: verde salvia, lavanda suave, beige cálido
-    const Color verdeBase     = Color(0xFF6BAE8E); // verde salvia — calma, crecimiento
-    const Color verdeSuave    = Color(0xFFE8F5EE); // fondo verde muy claro
-    const Color lavanda       = Color(0xFFB8A9D9); // lavanda — serenidad
-    const Color lavandaSuave  = Color(0xFFF0EDF8); // fondo lavanda claro
-    const Color beige         = Color(0xFFF7F3EE); // fondo principal cálido
-    const Color textoPrimario = Color(0xFF2D3A32); // verde oscuro casi negro
-    const Color textoSecund   = Color(0xFF7A8C81); // gris verdoso
+    final isPsi = _role == 'Psicólogo';
+    final greeting = 'Hola, ${_nombre.split(' ').first} 👋';
 
     return Scaffold(
-      backgroundColor: beige,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-
-              // ── HEADER ──────────────────────────────────────────────
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Hola, ${nombre.split(' ').first} 👋',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: textoPrimario,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        '¿Cómo te sientes hoy?',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: textoSecund,
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Avatar con inicial
-                  CircleAvatar(
-                    radius: 26,
-                    backgroundColor: verdeBase,
-                    child: Text(
-                      inicial,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
+      backgroundColor: _bg,
+      body: Column(
+        children: [
+          // ── HEADER ──────────────────────────────────────────────────────────
+          Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF1D35B4), Color(0xFF3B5CE6)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-
-              const SizedBox(height: 28),
-
-              // ── TARJETA ESTADO ÁNIMO ─────────────────────────────────
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: verdeBase,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+                child: Row(
                   children: [
-                    const Text(
-                      'Tu espacio seguro',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Recuerda: pedir ayuda es un acto\nde valentía, no de debilidad.',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                        height: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Emojis de estado de ánimo
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: ['😔', '😐', '🙂', '😊', '😄'].map((e) {
-                        return GestureDetector(
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Estado registrado $e'),
-                                backgroundColor: verdeBase,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
+                    // Texto bienvenida
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(greeting,
+                            style: const TextStyle(
+                              fontSize: 24, fontWeight: FontWeight.bold,
+                              color: Colors.white)),
+                          const SizedBox(height: 4),
+                          Text(
+                            isPsi ? 'Panel del psicólogo' : '¿Cómo te sientes hoy?',
+                            style: const TextStyle(
+                              fontSize: 13, color: Colors.white70)),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(e, style: const TextStyle(fontSize: 22)),
+                              borderRadius: BorderRadius.circular(20)),
+                            child: Text(_role,
+                              style: const TextStyle(
+                                fontSize: 11, color: Colors.white,
+                                fontWeight: FontWeight.w600)),
                           ),
-                        );
-                      }).toList(),
+                        ],
+                      ),
                     ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // ── SECCIÓN: HERRAMIENTAS ────────────────────────────────
-              const Text(
-                'Herramientas',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: textoPrimario,
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              Row(
-                children: [
-                  _ToolCard(
-                    icon: Icons.self_improvement_rounded,
-                    label: 'Respiración',
-                    sublabel: 'Ejercicios guiados',
-                    color: verdeBase,
-                    bgColor: verdeSuave,
-                  ),
-                  const SizedBox(width: 12),
-                  _ToolCard(
-                    icon: Icons.book_rounded,
-                    label: 'Diario',
-                    sublabel: 'Escribe tus pensamientos',
-                    color: lavanda,
-                    bgColor: lavandaSuave,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  _ToolCard(
-                    icon: Icons.headphones_rounded,
-                    label: 'Meditación',
-                    sublabel: 'Sesiones de calma',
-                    color: const Color(0xFF9FC4B7),
-                    bgColor: const Color(0xFFEDF5F2),
-                  ),
-                  const SizedBox(width: 12),
-                  _ToolCard(
-                    icon: Icons.bar_chart_rounded,
-                    label: 'Progreso',
-                    sublabel: 'Tu historial emocional',
-                    color: const Color(0xFFC9A87C),
-                    bgColor: const Color(0xFFF9F3EA),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 28),
-
-              // ── FRASE DEL DÍA ────────────────────────────────────────
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: lavandaSuave,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: lavanda.withOpacity(0.4)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                    // Logout + Avatar
                     Row(
                       children: [
-                        Icon(Icons.format_quote_rounded, color: lavanda, size: 20),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Frase del día',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: lavanda,
+                        // Botón logout
+                        GestureDetector(
+                          onTap: _logout,
+                          child: Container(
+                            width: 38, height: 38,
+                            margin: const EdgeInsets.only(right: 10),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withOpacity(0.15)),
+                            child: const Icon(
+                              Icons.power_settings_new_rounded,
+                              color: Colors.white70, size: 18),
+                          ),
+                        ),
+                        // Avatar
+                        Container(
+                          width: 50, height: 50,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withOpacity(0.25),
+                            border: Border.all(color: Colors.white60, width: 2)),
+                          child: Center(
+                            child: Text(_inicial,
+                              style: const TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.bold,
+                                color: Colors.white)),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      '"La salud mental es tan importante como la salud física. Cuídate con la misma dedicación."',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: textoPrimario,
-                        height: 1.6,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
                   ],
                 ),
               ),
-
-              const SizedBox(height: 32),
-
-              // ── BOTÓN CERRAR SESIÓN ──────────────────────────────────
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: OutlinedButton.icon(
-                  onPressed: () => _logout(context),
-                  icon: const Icon(Icons.logout_rounded, size: 18),
-                  label: const Text('Cerrar sesión'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: textoSecund,
-                    side: BorderSide(color: textoSecund.withOpacity(0.4)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    textStyle: const TextStyle(fontSize: 15),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-            ],
+            ),
           ),
-        ),
+
+          // ── CONTENIDO ───────────────────────────────────────────────────────
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+
+                  // Tarjeta bienvenida
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: _cardBg,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 12, offset: const Offset(0, 4))]),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: _primary.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(14)),
+                          child: const Icon(Icons.spa_rounded,
+                            color: _primary, size: 28),
+                        ),
+                        const SizedBox(width: 16),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Bienvenido a CalmSpace',
+                                style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold,
+                                  color: _textMain)),
+                              SizedBox(height: 4),
+                              Text('Tu espacio de bienestar emocional',
+                                style: TextStyle(
+                                  fontSize: 12, color: _textSub)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  const Text('Herramientas',
+                    style: TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.bold,
+                      color: _textMain)),
+                  const SizedBox(height: 12),
+
+                  // Grid de herramientas
+                  GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 1.2,
+                    children: [
+                      if (!isPsi) ...[
+                        _ToolCard(icon: Icons.calendar_month_outlined,
+                          label: 'Mis Citas', color: const Color(0xFF1D35B4)),
+                        _ToolCard(icon: Icons.self_improvement_rounded,
+                          label: 'Bienestar', color: const Color(0xFF7C3AED)),
+                        _ToolCard(icon: Icons.psychology_outlined,
+                          label: 'Psicólogos', color: const Color(0xFF0891B2)),
+                        _ToolCard(icon: Icons.article_outlined,
+                          label: 'Recursos', color: const Color(0xFF059669)),
+                      ] else ...[
+                        _ToolCard(icon: Icons.people_outline_rounded,
+                          label: 'Mis Pacientes', color: const Color(0xFF1D35B4)),
+                        _ToolCard(icon: Icons.schedule_rounded,
+                          label: 'Disponibilidad', color: const Color(0xFF7C3AED)),
+                        _ToolCard(icon: Icons.bar_chart_rounded,
+                          label: 'Estadísticas', color: const Color(0xFF0891B2)),
+                        _ToolCard(icon: Icons.settings_outlined,
+                          label: 'Configuración', color: const Color(0xFF059669)),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-// ── WIDGET TARJETA DE HERRAMIENTA ─────────────────────────────────────────────
 class _ToolCard extends StatelessWidget {
   final IconData icon;
   final String label;
-  final String sublabel;
   final Color color;
-  final Color bgColor;
 
-  const _ToolCard({
-    required this.icon,
-    required this.label,
-    required this.sublabel,
-    required this.color,
-    required this.bgColor,
-  });
+  const _ToolCard({required this.icon, required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Próximamente: $label'),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+    return GestureDetector(
+      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$label — próximamente'),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10, offset: const Offset(0, 3))],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(14)),
+              child: Icon(icon, color: color, size: 26),
             ),
-          );
-        },
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withOpacity(0.25)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: color, size: 22),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2D3A32),
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                sublabel,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFF7A8C81),
-                ),
-              ),
-            ],
-          ),
+            const SizedBox(height: 10),
+            Text(label,
+              style: const TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w600,
+                color: Color(0xFF1E293B))),
+          ],
         ),
       ),
     );
