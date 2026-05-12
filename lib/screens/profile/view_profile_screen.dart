@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/user_profile.dart';
+import '../../screens/availability/manage_availability_screen.dart';
 import 'edit_profile_screen.dart';
 
 class ViewProfileScreen extends StatefulWidget {
@@ -57,7 +58,6 @@ class _OwnProfileView extends StatelessWidget {
   final VoidCallback onRefresh;
 
   static const Color _primary    = Color(0xFF2563EB);
-  static const Color _primaryLight = Color(0xFFEEF3FF);
   static const Color _background = Color(0xFFF0F2F5);
   static const Color _textMain   = Color(0xFF111827);
 
@@ -290,19 +290,67 @@ class _OwnProfileView extends StatelessWidget {
 }
 
 // ── VISTA PÚBLICA PSICÓLOGO ──────────────────────────────────────────────────
-
-class _PublicPsychologistView extends StatelessWidget {
+class _PublicPsychologistView extends StatefulWidget {
   final UserProfile profile;
+  const _PublicPsychologistView({required this.profile});
 
+  @override
+  State<_PublicPsychologistView> createState() => _PublicPsychologistViewState();
+}
+
+class _PublicPsychologistViewState extends State<_PublicPsychologistView> {
   static const Color _primary    = Color(0xFF2563EB);
   static const Color _background = Color(0xFFF0F2F5);
   static const Color _textMain   = Color(0xFF111827);
 
-  const _PublicPsychologistView({required this.profile});
+  List<ScheduleSlot> _slots = [];
+  bool _loadingSlots = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSlots();
+  }
+
+  Future<void> _loadSlots() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('psychologists')
+          .doc(widget.profile.uid)
+          .collection('settings')
+          .doc('availability')
+          .get();
+      if (doc.exists) {
+        final raw = doc.data()!['slots'] as List? ?? [];
+        final loaded = raw
+            .whereType<Map>()
+            .map((s) => ScheduleSlot(
+                  id: s['id'] as String,
+                  day: s['day'] as String,
+                  startTime: s['startTime'] as String,
+                  endTime: s['endTime'] as String,
+                ))
+            .toList();
+        // Ordena por día de la semana
+        const dayOrder = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+        loaded.sort((a, b) =>
+            dayOrder.indexOf(a.day).compareTo(dayOrder.indexOf(b.day)));
+        if (mounted) setState(() => _slots = loaded);
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _loadingSlots = false);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final profile = widget.profile;
     final inicial = profile.fullName.isNotEmpty ? profile.fullName[0].toUpperCase() : 'P';
+
+    // Agrupa slots por día
+    final Map<String, List<ScheduleSlot>> byDay = {};
+    for (final s in _slots) {
+      byDay.putIfAbsent(s.day, () => []).add(s);
+    }
 
     return Scaffold(
       backgroundColor: _background,
@@ -311,7 +359,8 @@ class _PublicPsychologistView extends StatelessWidget {
         elevation: 0,
         leading: Container(
           margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(
+              color: Colors.white, borderRadius: BorderRadius.circular(12)),
           child: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new, size: 16, color: _textMain),
             onPressed: () => Navigator.pop(context),
@@ -331,7 +380,8 @@ class _PublicPsychologistView extends StatelessWidget {
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
             ),
-            child: const Text('Agendar Cita', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            child: const Text('Agendar Cita',
+                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ),
       ),
@@ -340,83 +390,124 @@ class _PublicPsychologistView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── AVATAR ────────────────────────────────────────
+            // AVATAR
             Center(
               child: CircleAvatar(
                 radius: 70,
                 backgroundColor: _primary,
-                child: Text(inicial, style: const TextStyle(fontSize: 56, color: Colors.white, fontWeight: FontWeight.bold)),
+                child: Text(inicial,
+                    style: const TextStyle(fontSize: 56, color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ),
             const SizedBox(height: 16),
 
-            // ── NOMBRE + ESPECIALIDAD ──────────────────────────
+            // NOMBRE + ESPECIALIDAD
             Center(
-              child: Column(
-                children: [
-                  Text(profile.fullName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _textMain)),
-                  const SizedBox(height: 4),
-                  Text(
-                    profile.specialty ?? 'Psicólogo',
-                    style: const TextStyle(fontSize: 15, color: _primary, fontWeight: FontWeight.w500),
-                  ),
-                ],
-              ),
+              child: Column(children: [
+                Text(profile.fullName,
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _textMain)),
+                const SizedBox(height: 4),
+                Text(profile.specialty ?? 'Psicólogo',
+                    style: const TextStyle(fontSize: 15, color: _primary, fontWeight: FontWeight.w500)),
+              ]),
             ),
-
             const SizedBox(height: 16),
 
-            // ── BADGES ────────────────────────────────────────
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (profile.experienceYears != null)
-                  _Badge(icon: Icons.shield_outlined, label: '${profile.experienceYears} años experiencia'),
-                if (profile.experienceYears != null && profile.modality != null)
-                  const SizedBox(width: 12),
-                if (profile.modality != null)
-                  _Badge(icon: Icons.location_on_outlined, label: 'Modalidad ${profile.modality}'),
-              ],
-            ),
-
+            // BADGES
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              if (profile.experienceYears != null)
+                _Badge(icon: Icons.shield_outlined,
+                    label: '${profile.experienceYears} años experiencia'),
+              if (profile.experienceYears != null && profile.modality != null)
+                const SizedBox(width: 12),
+              if (profile.modality != null)
+                _Badge(icon: Icons.location_on_outlined,
+                    label: 'Modalidad ${profile.modality}'),
+            ]),
             const SizedBox(height: 28),
 
-            // ── SOBRE MÍ ──────────────────────────────────────
+            // SOBRE MÍ
             if (profile.description != null && profile.description!.isNotEmpty) ...[
-              const Text('Sobre mí', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textMain)),
+              const Text('Sobre mí',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textMain)),
               const SizedBox(height: 10),
-              Text(
-                profile.description!,
-                style: const TextStyle(fontSize: 14, color: Color(0xFF4A4A6A), height: 1.6),
-              ),
+              Text(profile.description!,
+                  style: const TextStyle(fontSize: 14, color: Color(0xFF4A4A6A), height: 1.6)),
               const SizedBox(height: 28),
             ],
 
-            // ── PRÓXIMOS HORARIOS ──────────────────────────────
-            const Text('Próximos Horarios', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textMain)),
+            // ── DISPONIBILIDAD HORARIA — desde Firestore ──────────────────
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              const Text('Disponibilidad',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textMain)),
+              if (_loadingSlots)
+                const SizedBox(width: 18, height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: _primary)),
+            ]),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: ['10:00 AM', '2:00 PM', '4:00 PM']
-                  .map((t) => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.access_time, size: 16, color: _primary),
-                            const SizedBox(width: 6),
-                            Text(t, style: const TextStyle(fontSize: 14, color: _textMain, fontWeight: FontWeight.w500)),
-                          ],
-                        ),
-                      ))
-                  .toList(),
-            ),
+
+            if (_loadingSlots)
+              const SizedBox()
+            else if (_slots.isEmpty)
+              // Estado vacío
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.grey.shade200)),
+                child: Column(children: const [
+                  Icon(Icons.calendar_today_outlined,
+                      color: Color(0xFFCBD5E1), size: 40),
+                  SizedBox(height: 12),
+                  Text('Este psicólogo aún no ha\nconfigurado su disponibilidad',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Color(0xFF8A94A6), fontSize: 13)),
+                ]),
+              )
+            else
+              // Tarjetas de disponibilidad por día
+              ...byDay.entries.map((entry) => Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8, offset: const Offset(0, 2))]),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  // Etiqueta del día
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(20)),
+                    child: Text(entry.key,
+                        style: const TextStyle(
+                            color: _primary, fontSize: 12, fontWeight: FontWeight.w700)),
+                  ),
+                  const SizedBox(height: 10),
+                  // Chips de horario
+                  Wrap(spacing: 8, runSpacing: 8,
+                    children: entry.value.map((slot) => Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0F4FF),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: _primary.withValues(alpha: 0.2))),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.access_time, size: 14, color: _primary),
+                        const SizedBox(width: 5),
+                        Text(slot.label,
+                            style: const TextStyle(
+                                fontSize: 13, color: _textMain, fontWeight: FontWeight.w500)),
+                      ]),
+                    )).toList()),
+                ]),
+              )),
+
             const SizedBox(height: 100),
           ],
         ),
@@ -425,7 +516,9 @@ class _PublicPsychologistView extends StatelessWidget {
   }
 }
 
+
 // ── WIDGETS AUXILIARES ────────────────────────────────────────────────────────
+
 class _InfoCard extends StatelessWidget {
   final IconData icon;
   final String title;
