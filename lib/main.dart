@@ -1,55 +1,8 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
-
-feature/HU-05-gestionar-disponibilidad-horaria
-import 'screens/availability/manage_availability_screen.dart';
-
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  final firestoreReady = await _initializeFirebase();
-
-  runApp(CalmSpaceApp(firestoreReady: firestoreReady));
-}
-
-Future<bool> _initializeFirebase() async {
-  try {
-    await Firebase.initializeApp();
-    return true;
-  } on Object {
-    return false;
-  }
-}
-
-class CalmSpaceApp extends StatelessWidget {
-  const CalmSpaceApp({super.key, required this.firestoreReady});
-
-  final bool firestoreReady;
-
-  @override
-  Widget build(BuildContext context) {
-    const primary = Color(0xFF356859);
-
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'CalmSpace',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: primary,
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF5F7F2),
-        useMaterial3: true,
-      ),
-      home: ManageAvailabilityScreen(firestoreReady: firestoreReady),
-      routes: {
-        ManageAvailabilityScreen.routeName: (context) =>
-            ManageAvailabilityScreen(firestoreReady: firestoreReady),
-
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/pending_approval_screen.dart';
@@ -112,19 +65,15 @@ class MyApp extends StatelessWidget {
                 final role = data['role'] ?? 'Paciente';
                 final status = data['status'] ?? 'activo';
 
-                // Psicólogo pendiente de aprobación
-                if (role == 'Psicólogo' && status == 'pendiente') {
-                  return const PendingApprovalScreen();
-                }
-
-                // Psicólogo rechazado
-                if (role == 'Psicólogo' && status == 'rechazado') {
+                // Psicólogo pendiente o rechazado
+                if (role == 'Psicólogo' &&
+                    (status == 'pendiente' || status == 'rechazado')) {
                   return const PendingApprovalScreen();
                 }
               }
 
-              // Paciente o psicólogo aprobado → Home normal
-              return HomeScreen();
+              // Paciente o psicólogo aprobado → Home
+              return const HomeScreen();
             },
           );
         },
@@ -132,9 +81,8 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login':    (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
-        '/home':     (context) => HomeScreen(),
+        '/home':     (context) => const HomeScreen(),
         '/pending':  (context) => const PendingApprovalScreen(),
- main
       },
     );
   }
