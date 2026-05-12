@@ -100,7 +100,8 @@ class PsychologistCard extends StatelessWidget {
                                 fontSize: 12, color: Colors.grey.shade500),
                           ),
                           const Spacer(),
-                          _ModalidadBadge(modalidad: psychologist.modalidad),
+                          if (psychologist.modalidad != null)
+                            _ModalidadBadge(modalidad: psychologist.modalidad!),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -116,7 +117,9 @@ class PsychologistCard extends StatelessWidget {
                           ),
                           const Spacer(),
                           Text(
-                            '\$${_formatPrice(psychologist.pricePerSession)} / sesión',
+                            psychologist.pricePerSession != null
+                                ? '\$${_formatPrice(psychologist.pricePerSession!)} / sesión'
+                                : 'Consultar precio',
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -152,11 +155,11 @@ class PsychologistCard extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
       ),
-      child: psychologist.photoUrl.isNotEmpty
+      child: (psychologist.photoUrl != null && psychologist.photoUrl!.isNotEmpty)
           ? ClipRRect(
               borderRadius: BorderRadius.circular(14),
               child: Image.network(
-                psychologist.photoUrl,
+                psychologist.photoUrl!,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => _initialsWidget(initials),
               ),
@@ -197,6 +200,7 @@ class PsychologistCard extends StatelessWidget {
     if (price >= 1000) return '${(price / 1000).toStringAsFixed(0)}k';
     return price.toStringAsFixed(0);
   }
+
 }
 
 class _ModalidadBadge extends StatelessWidget {

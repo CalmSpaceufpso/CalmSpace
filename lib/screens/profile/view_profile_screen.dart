@@ -57,7 +57,6 @@ class _OwnProfileView extends StatelessWidget {
   final VoidCallback onRefresh;
 
   static const Color _primary    = Color(0xFF2563EB);
-  static const Color _primaryLight = Color(0xFFEEF3FF);
   static const Color _background = Color(0xFFF0F2F5);
   static const Color _textMain   = Color(0xFF111827);
 
