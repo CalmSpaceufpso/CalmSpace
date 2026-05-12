@@ -4,10 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   cloud_firestore
- feature/HU-05-gestionar-disponibilidad-horaria
-
   firebase_auth
- main
   firebase_core
 )
 
