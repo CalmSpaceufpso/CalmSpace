@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'mood/mood_history_screen.dart';
+import 'profile/view_profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -121,63 +120,68 @@ class _HomeScreenState extends State<HomeScreen> {
           body: Center(child: CircularProgressIndicator(color: _primary)));
     }
     return Scaffold(
-      backgroundColor: _bg,
-      bottomNavigationBar: _BottomNav(
-          current: _navIndex, onTap: (i) => setState(() => _navIndex = i)),
-      body: IndexedStack(index: _navIndex, children: [
-        _HomeTab(
-          nombre: _nombre, role: _role, imageUrl: _imageUrl,
-          moodIndex: _moodIndex, moodSaved: _moodSaved, savingMood: _savingMood,
-          onMoodTap: (i) => setState(() { _moodIndex = i; _moodSaved = false; }),
-          onConfirmMood: _saveMood,
-          onLogout: _logout,
-        ),
-        const _ComingSoon(Icons.search_rounded, 'Buscar Psicólogos', 'HU-06 — próximamente'),
-        const _ComingSoon(Icons.calendar_today_rounded, 'Disponibilidad', 'HU-05 — próximamente'),
-        const _ComingSoon(Icons.person_outline_rounded, 'Perfil', 'HU-04 — próximamente'),
-      ]),
-    );
-  }
-}
+      backgroundColor: beige,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
 
-// ── BOTTOM NAV ────────────────────────────────────────────────────────────────
-class _BottomNav extends StatelessWidget {
-  final int current;
-  final ValueChanged<int> onTap;
-  static const Color _p = Color(0xFF2B5BFF);
-  static const _items = [
-    (Icons.home_rounded,'Home'), (Icons.search_rounded,'Buscar'),
-    (Icons.calendar_today_rounded,'Agenda'), (Icons.person_outline_rounded,'Perfil'),
-  ];
-  const _BottomNav({required this.current, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      color: _p,
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      boxShadow: [BoxShadow(color: _p.withOpacity(0.4), blurRadius: 20, offset: const Offset(0,-4))]),
-    child: SafeArea(top: false,
-      child: Padding(padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: List.generate(_items.length, (i) {
-            final a = current == i;
-            return GestureDetector(onTap: () => onTap(i),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: a ? Colors.white.withOpacity(0.15) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(16)),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(_items[i].$1, color: a ? Colors.white : Colors.white54, size: 24),
-                  const SizedBox(height: 4),
-                  Text(_items[i].$2, style: TextStyle(fontSize: 11,
-                    color: a ? Colors.white : Colors.white54,
-                    fontWeight: a ? FontWeight.w700 : FontWeight.normal)),
-                  if (a) ...[const SizedBox(height:4), Container(width:4,height:4,
-                    decoration: const BoxDecoration(color:Colors.white,shape:BoxShape.circle))],
-                ]),
+              // ── HEADER ──────────────────────────────────────────────
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Hola, ${nombre.split(' ').first} 👋',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: textoPrimario,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        '¿Cómo te sientes hoy?',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: textoSecund,
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Avatar con inicial
+                  GestureDetector(
+                    onTap: () {
+                      if (user != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ViewProfileScreen(
+                              uid: user.uid,
+                              isOwnProfile: true,
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    child: CircleAvatar(
+                      radius: 26,
+                      backgroundColor: verdeBase,
+                      child: Text(
+                        inicial,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             );
           }),
