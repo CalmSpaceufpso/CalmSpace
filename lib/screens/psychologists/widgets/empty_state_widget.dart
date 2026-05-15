@@ -28,11 +28,11 @@ class EmptyStateWidget extends StatelessWidget {
               width: 90,
               height: 90,
               decoration: BoxDecoration(
-                color: const Color(0xFF6C63FF).withOpacity(0.1),
+                color: const Color(0xFF1D35B4).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.search_off_rounded,
-                  size: 44, color: Color(0xFF6C63FF)),
+                  size: 44, color: Color(0xFF1D35B4)),
             ),
             const SizedBox(height: 20),
             Text(
@@ -61,8 +61,8 @@ class EmptyStateWidget extends StatelessWidget {
                 icon: const Icon(Icons.filter_alt_off_rounded, size: 18),
                 label: const Text('Limpiar filtros'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF6C63FF),
-                  side: const BorderSide(color: Color(0xFF6C63FF)),
+                  foregroundColor: const Color(0xFF1D35B4),
+                  side: const BorderSide(color: Color(0xFF1D35B4)),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),

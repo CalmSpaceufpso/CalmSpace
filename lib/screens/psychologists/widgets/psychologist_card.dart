@@ -26,7 +26,7 @@ class PsychologistCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
+                color: Colors.black.withValues(alpha: 0.06),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -72,10 +72,10 @@ class PsychologistCard extends StatelessWidget {
                       Text(
                         psychologist.specialty,
                         style: const TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF6C63FF),
-                          fontWeight: FontWeight.w500,
-                        ),
+                                fontSize: 13,
+                                color: Color(0xFF1D35B4),
+                                fontWeight: FontWeight.w500,
+                              ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -100,7 +100,8 @@ class PsychologistCard extends StatelessWidget {
                                 fontSize: 12, color: Colors.grey.shade500),
                           ),
                           const Spacer(),
-                          _ModalidadBadge(modalidad: psychologist.modalidad),
+                          if (psychologist.modalidad != null)
+                            _ModalidadBadge(modalidad: psychologist.modalidad!),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -116,7 +117,9 @@ class PsychologistCard extends StatelessWidget {
                           ),
                           const Spacer(),
                           Text(
-                            '\$${_formatPrice(psychologist.pricePerSession)} / sesión',
+                            psychologist.pricePerSession != null
+                                ? '\$${_formatPrice(psychologist.pricePerSession!)} / sesión'
+                                : 'Consultar precio',
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -152,11 +155,11 @@ class PsychologistCard extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
       ),
-      child: psychologist.photoUrl.isNotEmpty
+      child: (psychologist.photoUrl != null && psychologist.photoUrl!.isNotEmpty)
           ? ClipRRect(
               borderRadius: BorderRadius.circular(14),
               child: Image.network(
-                psychologist.photoUrl,
+                psychologist.photoUrl!,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => _initialsWidget(initials),
               ),
@@ -183,11 +186,11 @@ class PsychologistCard extends StatelessWidget {
 
   List<Color> _getAvatarGradient(String name) {
     final gradients = [
-      [const Color(0xFF6C63FF), const Color(0xFF9C94FF)],
+      [const Color(0xFF1D35B4), const Color(0xFF4B6BFF)],
       [const Color(0xFF00BFA5), const Color(0xFF1DE9B6)],
-      [const Color(0xFFF57C00), const Color(0xFFFFB74D)],
-      [const Color(0xFF1565C0), const Color(0xFF42A5F5)],
-      [const Color(0xFF6A1B9A), const Color(0xFFBA68C8)],
+      [const Color(0xFF0D47A1), const Color(0xFF42A5F5)],
+      [const Color(0xFF1565C0), const Color(0xFF64B5F6)],
+      [const Color(0xFF283593), const Color(0xFF7986CB)],
     ];
     final index = name.codeUnitAt(0) % gradients.length;
     return gradients[index];
@@ -197,6 +200,7 @@ class PsychologistCard extends StatelessWidget {
     if (price >= 1000) return '${(price / 1000).toStringAsFixed(0)}k';
     return price.toStringAsFixed(0);
   }
+
 }
 
 class _ModalidadBadge extends StatelessWidget {
@@ -209,7 +213,7 @@ class _ModalidadBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: (config['color'] as Color).withOpacity(0.12),
+        color: (config['color'] as Color).withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
@@ -234,11 +238,11 @@ class _ModalidadBadge extends StatelessWidget {
   Map<String, dynamic> _getConfig() {
     switch (modalidad) {
       case 'Virtual':
-        return {'color': const Color(0xFF6C63FF), 'icon': Icons.videocam_outlined};
+        return {'color': const Color(0xFF1D35B4), 'icon': Icons.videocam_outlined};
       case 'Presencial':
         return {'color': const Color(0xFF00BFA5), 'icon': Icons.location_on_outlined};
       default:
-        return {'color': const Color(0xFFF57C00), 'icon': Icons.swap_horiz_rounded};
+        return {'color': const Color(0xFF1565C0), 'icon': Icons.swap_horiz_rounded};
     }
   }
 }

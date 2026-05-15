@@ -42,7 +42,7 @@ class FilterChipsWidget extends StatelessWidget {
                 child: _FilterChip(
                   label: 'Todos',
                   isSelected: selectedSpecialty == null && selectedModalidad == null,
-                  color: const Color(0xFF6C63FF),
+                  color: const Color(0xFF1D35B4),
                   onTap: onClearFilters,
                 ),
               ),
@@ -112,7 +112,7 @@ class _FilterChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: isSelected ? color : Colors.grey.shade300),
           boxShadow: isSelected
-              ? [BoxShadow(color: color.withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 3))]
+              ? [BoxShadow(color: color.withValues(alpha: 0.25), blurRadius: 8, offset: const Offset(0, 3))]
               : [],
         ),
         child: Text(
