@@ -3,7 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'profile/view_profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final bool firestoreReady;
+  const HomeScreen({super.key, this.firestoreReady = true});
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }

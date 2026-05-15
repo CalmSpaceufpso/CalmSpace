@@ -14,14 +14,19 @@ import 'screens/psychologists/psychologist_catalog_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  runApp(const MyApp());
+  bool firestoreReady = false;
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    firestoreReady = true;
+  } catch (_) {}
+  runApp(CalmSpaceApp(firestoreReady: firestoreReady));
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class CalmSpaceApp extends StatelessWidget {
+  final bool firestoreReady;
+  const CalmSpaceApp({super.key, required this.firestoreReady});
 
   @override
   Widget build(BuildContext context) {
@@ -45,8 +50,9 @@ class MyApp extends StatelessWidget {
             );
           }
 
-          // Sin sesión → Login
-          if (!snapshot.hasData) return const LoginScreen();
+            if (!snapshot.hasData || snapshot.data == null) {
+              return const LoginScreen();
+            }
 
           // Con sesión → verificar rol y status en Firestore
           return FutureBuilder<DocumentSnapshot>(
@@ -74,7 +80,6 @@ class MyApp extends StatelessWidget {
                     (status == 'pendiente' || status == 'rechazado')) {
                   return const PendingApprovalScreen();
                 }
-              }
 
               // Paciente o psicólogo aprobado → Home
               return const HomeScreen();
@@ -131,7 +136,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Pantalla temporal de pendiente (hasta que se haga merge con las demás ramas)
+// ── PENDING SCREEN ─────────────────────────────────────────────────────────
 class _PendingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -146,14 +151,11 @@ class _PendingScreen extends StatelessWidget {
               const Icon(Icons.hourglass_top_rounded,
                   size: 64, color: Color(0xFF1D35B4)),
               const SizedBox(height: 20),
-              const Text(
-                'Cuenta en revisión',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
-                ),
-              ),
+              const Text('Cuenta en revisión',
+                  style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1E293B))),
               const SizedBox(height: 10),
               const Text(
                 'Tu cuenta de psicólogo está siendo verificada.\nTe notificaremos cuando sea aprobada.',
