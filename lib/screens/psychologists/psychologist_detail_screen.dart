@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/psychologist_model.dart';
+import '../appointments/schedule_appointment_screen.dart';
 
 class PsychologistDetailScreen extends StatelessWidget {
   final PsychologistModel psychologist;
@@ -38,11 +39,9 @@ class PsychologistDetailScreen extends StatelessWidget {
         child: SizedBox(
           height: 54,
           child: ElevatedButton.icon(
-            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Próximamente: Agendar cita'),
-                behavior: SnackBarBehavior.floating,
-              ),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => ScheduleAppointmentScreen(psychologist: psychologist)),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: _primary,
@@ -188,22 +187,60 @@ class PsychologistDetailScreen extends StatelessWidget {
           const SizedBox(height: 10),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Column(children: const [
-              Icon(Icons.calendar_today_outlined,
-                  color: Color(0xFFCBD5E1), size: 36),
-              SizedBox(height: 10),
-              Text(
-                'Los horarios disponibles se\nmostrarán aquí próximamente',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFF8A94A6), fontSize: 13),
+              gradient: LinearGradient(
+                colors: [_primary.withOpacity(0.05), _primary.withOpacity(0.15)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-            ]),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: _primary.withOpacity(0.2)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _primary.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.calendar_month_rounded, color: _primary, size: 28),
+                ),
+                const SizedBox(width: 16),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Agenda abierta',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: _textMain,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Toca el botón inferior para ver horarios disponibles',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: _textSub,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 100),
         ]),
