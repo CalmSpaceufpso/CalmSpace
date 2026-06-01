@@ -188,6 +188,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           checkAnim: _checkAnim,
           onMoodTap: _autoSaveMood,
           onLogout: _logout,
+          onViewAllPsychologists: () => setState(() => _navIndex = 1),
         ),
         const PsychologistCatalogScreen(),
         const _ComingSoon(Icons.calendar_today_rounded, 'Disponibilidad', 'Selecciona tu psicólogo primero'),
@@ -257,6 +258,7 @@ class _HomeTab extends StatelessWidget {
   final Animation<double> checkAnim;
   final ValueChanged<int> onMoodTap;
   final VoidCallback onLogout;
+  final VoidCallback onViewAllPsychologists;
 
   static const Color _primary  = Color(0xFF2B5BFF);
   static const Color _textMain = Color(0xFF0D1B3E);
@@ -264,10 +266,11 @@ class _HomeTab extends StatelessWidget {
 
   const _HomeTab({
     required this.nombre, required this.role,
-    required this.moodIndex, required this.todayCount,
-    required this.todayAverage, required this.savingMood,
+    this.moodIndex, required this.todayCount,
+    this.todayAverage, required this.savingMood,
     required this.showCheck, required this.checkAnim,
     required this.onMoodTap, required this.onLogout,
+    required this.onViewAllPsychologists,
   });
 
   @override
@@ -584,12 +587,23 @@ class _HomeTab extends StatelessWidget {
 
           const SizedBox(height: 24),
 
+          // PRÓXIMAS CITAS
+          const Text('Próximas Citas',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: _textMain)),
+          const SizedBox(height: 14),
+          const _AppointmentsCarousel(),
+
+          const SizedBox(height: 24),
+
           // PSICÓLOGOS DISPONIBLES — Firestore en tiempo real
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             const Text('Psicólogos Disponibles',
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: _textMain)),
-            const Text('Ver todos',
-              style: TextStyle(fontSize: 13, color: _primary, fontWeight: FontWeight.w600)),
+            GestureDetector(
+              onTap: onViewAllPsychologists,
+              child: const Text('Ver todos',
+                style: TextStyle(fontSize: 13, color: _primary, fontWeight: FontWeight.w600)),
+            ),
           ]),
           const SizedBox(height: 14),
 
@@ -630,9 +644,10 @@ class _HomeTab extends StatelessWidget {
                 itemBuilder: (_, i) {
                   final d = docs[i].data() as Map<String, dynamic>;
                   return _PsychCard(
-                    name: d['name'] ?? 'Sin nombre',
+                    name: d['fullName'] ?? d['name'] ?? 'Sin nombre',
                     specialty: d['specialty'] ?? 'Psicólogo',
                     rating: (d['rating'] as num?)?.toDouble(),
+                    photoUrl: d['photoUrl'],
                   );
                 },
               );
@@ -649,10 +664,11 @@ class _HomeTab extends StatelessWidget {
 class _PsychCard extends StatelessWidget {
   final String name, specialty;
   final double? rating;
+  final String? photoUrl;
   static const Color _primary  = Color(0xFF2B5BFF);
   static const Color _textMain = Color(0xFF0D1B3E);
   static const Color _textSub  = Color(0xFF8A94A6);
-  const _PsychCard({required this.name, required this.specialty, this.rating});
+  const _PsychCard({required this.name, required this.specialty, this.rating, this.photoUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -667,10 +683,15 @@ class _PsychCard extends StatelessWidget {
         Stack(children: [
           Container(width: 52, height: 52,
             decoration: BoxDecoration(color: _primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(14)),
-            child: Center(child: Text(inicial,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold,
-                    color: _primary)))),
+                borderRadius: BorderRadius.circular(14),
+                image: photoUrl != null && photoUrl!.isNotEmpty
+                    ? DecorationImage(image: NetworkImage(photoUrl!), fit: BoxFit.cover)
+                    : null),
+            child: photoUrl == null || photoUrl!.isEmpty
+                ? Center(child: Text(inicial,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold,
+                        color: _primary)))
+                : null),
           Positioned(bottom: 0, right: 0,
             child: Container(width: 12, height: 12,
               decoration: BoxDecoration(color: const Color(0xFF22C55E),
@@ -998,6 +1019,128 @@ class _MotivationalCarouselState extends State<_MotivationalCarousel> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── PRÓXIMAS CITAS CAROUSEL ────────────────────────────────────────────────
+class _AppointmentsCarousel extends StatelessWidget {
+  const _AppointmentsCarousel();
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const SizedBox.shrink();
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('appointments')
+          .where('patientId', isEqualTo: user.uid)
+          .where('status', isEqualTo: 'scheduled')
+          .snapshots(),
+      builder: (context, snap) {
+        if (snap.hasError) {
+          return Center(child: Text('Error: ${snap.error}'));
+        }
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: Color(0xFF2B5BFF)));
+        }
+        var docs = snap.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: const Column(
+              children: [
+                Icon(Icons.event_busy_rounded, color: Color(0xFFCBD5E1), size: 36),
+                SizedBox(height: 8),
+                Text('No tienes citas programadas',
+                  style: TextStyle(color: Color(0xFF8A94A6), fontSize: 13, fontWeight: FontWeight.w500)),
+              ],
+            ),
+          );
+        }
+
+        final now = DateTime.now();
+        // Sort in memory by appointment date and time
+        docs = docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final dateStr = data['date'] as String? ?? '';
+          final timeStr = data['startTime'] as String? ?? '';
+          final dt = DateTime.tryParse('$dateStr $timeStr:00');
+          // Optionally filter past appointments
+          if (dt != null && dt.isBefore(now.subtract(const Duration(hours: 1)))) return false;
+          return true;
+        }).toList()..sort((a, b) {
+          final aData = a.data() as Map<String, dynamic>;
+          final bData = b.data() as Map<String, dynamic>;
+          
+          final aDateStr = aData['date'] as String? ?? '';
+          final aTimeStr = aData['startTime'] as String? ?? '';
+          final bDateStr = bData['date'] as String? ?? '';
+          final bTimeStr = bData['startTime'] as String? ?? '';
+
+          final aDateTime = DateTime.tryParse('$aDateStr $aTimeStr:00') ?? DateTime.now();
+          final bDateTime = DateTime.tryParse('$bDateStr $bTimeStr:00') ?? DateTime.now();
+          
+          return aDateTime.compareTo(bDateTime);
+        });
+        
+        // Limit to 3 in memory
+        if (docs.length > 3) docs = docs.sublist(0, 3);
+
+        return SizedBox(
+          height: 110,
+          child: PageView.builder(
+            controller: PageController(viewportFraction: 0.9),
+            itemCount: docs.length,
+            itemBuilder: (context, index) {
+              final d = docs[index].data() as Map<String, dynamic>;
+              return Container(
+                margin: const EdgeInsets.only(right: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF2B5BFF), Color(0xFF5E81FF)],
+                    begin: Alignment.topLeft, end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(color: const Color(0xFF2B5BFF).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(14)),
+                      child: const Icon(Icons.calendar_month_rounded, color: Colors.white, size: 28),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('Cita confirmada', style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12)),
+                          const SizedBox(height: 4),
+                          Text('${d['date']} • ${d['startTime']}', 
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
