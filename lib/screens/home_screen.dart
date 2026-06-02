@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'mood/mood_history_screen.dart';
 import 'profile/view_profile_screen.dart';
 import 'psychologists/psychologist_catalog_screen.dart';
+import 'appointments/agenda_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool firestoreReady;
@@ -191,7 +192,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           onViewAllPsychologists: () => setState(() => _navIndex = 1),
         ),
         const PsychologistCatalogScreen(),
-        const _ComingSoon(Icons.calendar_today_rounded, 'Disponibilidad', 'Selecciona tu psicólogo primero'),
+        const AgendaScreen(),
         ViewProfileScreen(
           uid: FirebaseAuth.instance.currentUser?.uid ?? '',
           isOwnProfile: true,
