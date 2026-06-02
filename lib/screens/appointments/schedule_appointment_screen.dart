@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../../models/psychologist_model.dart';
 import '../../models/appointment_model.dart';
@@ -97,12 +98,20 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
     setState(() => _saving = true);
 
     try {
+      // Get patient name
+      String patientName = 'Paciente';
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (userDoc.exists) {
+        patientName = userDoc.data()?['name'] ?? 'Paciente';
+      }
+
       final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
       final appointment = AppointmentModel(
         id: '', // Firestore will auto-generate
         psychologistId: widget.psychologist.id,
         psychologistName: widget.psychologist.name,
         patientId: user.uid,
+        patientName: patientName,
         slotId: _selectedSlot!.id,
         date: dateStr,
         startTime: _selectedSlot!.startTime,

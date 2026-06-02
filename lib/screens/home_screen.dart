@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,6 +7,7 @@ import 'mood/mood_history_screen.dart';
 import 'profile/view_profile_screen.dart';
 import 'psychologists/psychologist_catalog_screen.dart';
 import 'appointments/agenda_screen.dart';
+import 'availability/manage_availability_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool firestoreReady;
@@ -174,30 +176,45 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       return const Scaffold(backgroundColor: _bg,
           body: Center(child: CircularProgressIndicator(color: _primary)));
     }
+
+    final isPsi = _role == 'Psicólogo';
+    final uid   = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+    // ── Tabs para cada rol ──────────────────────────────────────────────────
+    final List<Widget> psiTabs = [
+      _PsychologistHomeTab(nombre: _nombre, uid: uid, firestoreReady: widget.firestoreReady),
+      ManageAvailabilityScreen(firestoreReady: widget.firestoreReady, psychologistId: uid),
+      const AgendaScreen(),
+      ViewProfileScreen(uid: uid, isOwnProfile: true),
+    ];
+    final List<Widget> pacienteTabs = [
+      _HomeTab(
+        nombre: _nombre, role: _role,
+        moodIndex: _moodIndex,
+        todayCount: _todayCount,
+        todayAverage: _todayAverage,
+        savingMood: _savingMood,
+        showCheck: _showCheck,
+        checkAnim: _checkAnim,
+        onMoodTap: _autoSaveMood,
+        onLogout: _logout,
+        onViewAllPsychologists: () => setState(() => _navIndex = 1),
+      ),
+      const PsychologistCatalogScreen(),
+      const AgendaScreen(),
+      ViewProfileScreen(uid: uid, isOwnProfile: true),
+    ];
+
+    final tabs = isPsi ? psiTabs : pacienteTabs;
+
     return Scaffold(
       backgroundColor: _bg,
       bottomNavigationBar: _BottomNav(
-          current: _navIndex, onTap: (i) => setState(() => _navIndex = i)),
-      body: IndexedStack(index: _navIndex, children: [
-        _HomeTab(
-          nombre: _nombre, role: _role,
-          moodIndex: _moodIndex,
-          todayCount: _todayCount,
-          todayAverage: _todayAverage,
-          savingMood: _savingMood,
-          showCheck: _showCheck,
-          checkAnim: _checkAnim,
-          onMoodTap: _autoSaveMood,
-          onLogout: _logout,
-          onViewAllPsychologists: () => setState(() => _navIndex = 1),
-        ),
-        const PsychologistCatalogScreen(),
-        const AgendaScreen(),
-        ViewProfileScreen(
-          uid: FirebaseAuth.instance.currentUser?.uid ?? '',
-          isOwnProfile: true,
-        ),
-      ]),
+        current: _navIndex,
+        onTap: (i) => setState(() => _navIndex = i),
+        isPsychologist: isPsi,
+      ),
+      body: IndexedStack(index: _navIndex, children: tabs),
     );
   }
 }
@@ -206,15 +223,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 class _BottomNav extends StatelessWidget {
   final int current;
   final ValueChanged<int> onTap;
+  final bool isPsychologist;
   static const Color _p = Color(0xFF2B5BFF);
-  static const _items = [
+
+  static const _patientItems = [
     (Icons.home_rounded,'Home'), (Icons.search_rounded,'Buscar'),
     (Icons.calendar_today_rounded,'Agenda'), (Icons.person_outline_rounded,'Perfil'),
   ];
-  const _BottomNav({required this.current, required this.onTap});
+  static const _psiItems = [
+    (Icons.home_rounded,'Home'), (Icons.schedule_rounded,'Horarios'),
+    (Icons.calendar_today_rounded,'Citas'), (Icons.person_outline_rounded,'Perfil'),
+  ];
+
+  const _BottomNav({required this.current, required this.onTap, this.isPsychologist = false});
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    final items = isPsychologist ? _psiItems : _patientItems;
+    return Container(
     decoration: BoxDecoration(
       color: _p,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -222,7 +248,7 @@ class _BottomNav extends StatelessWidget {
     child: SafeArea(top: false,
       child: Padding(padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: List.generate(_items.length, (i) {
+          children: List.generate(items.length, (i) {
             final a = current == i;
             return GestureDetector(onTap: () => onTap(i),
               child: AnimatedContainer(
@@ -232,9 +258,9 @@ class _BottomNav extends StatelessWidget {
                   color: a ? Colors.white.withOpacity(0.15) : Colors.transparent,
                   borderRadius: BorderRadius.circular(16)),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(_items[i].$1, color: a ? Colors.white : Colors.white54, size: 24),
+                  Icon(items[i].$1, color: a ? Colors.white : Colors.white54, size: 24),
                   const SizedBox(height: 4),
-                  Text(_items[i].$2, style: TextStyle(fontSize: 11,
+                  Text(items[i].$2, style: TextStyle(fontSize: 11,
                     color: a ? Colors.white : Colors.white54,
                     fontWeight: a ? FontWeight.w700 : FontWeight.normal)),
                   if (a) ...[const SizedBox(height:4), Container(width:4,height:4,
@@ -247,6 +273,7 @@ class _BottomNav extends StatelessWidget {
       ),
     ),
   );
+  }
 }
 
 // ── HOME TAB ──────────────────────────────────────────────────────────────────
@@ -276,9 +303,11 @@ class _HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
     final first = nombre.split(' ').first.isNotEmpty ? nombre.split(' ').first : 'Usuario';
     final inicial = first[0].toUpperCase();
     final moods = MoodData.moods;
+    const Color verdeBase = Color(0xFF2B5BFF);
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -296,19 +325,38 @@ class _HomeTab extends StatelessWidget {
                 style: const TextStyle(fontSize: 13, color: _textSub)),
             ]),
             // Avatar — navega al tab de Perfil
-            GestureDetector(
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Perfil disponible en HU-04'),
-                    behavior: SnackBarBehavior.floating,
-                  ));
-              },
-              child: Container(width: 46, height: 46,
-                decoration: const BoxDecoration(color: _primary, shape: BoxShape.circle),
-                child: Center(child: Text(inicial,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold,
-                      color: Colors.white))))),
+            StreamBuilder<DocumentSnapshot>(
+              stream: user != null 
+                  ? FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots() 
+                  : const Stream.empty(),
+              builder: (context, snapshot) {
+                String? photoUrl;
+                if (snapshot.hasData && snapshot.data!.exists) {
+                  final data = snapshot.data!.data() as Map<String, dynamic>;
+                  photoUrl = data['photoUrl'];
+                }
+                
+                return CircleAvatar(
+                  radius: 26,
+                  backgroundColor: verdeBase,
+                  backgroundImage: photoUrl != null && photoUrl.isNotEmpty
+                      ? (photoUrl.startsWith('http')
+                          ? NetworkImage(photoUrl)
+                          : MemoryImage(base64Decode(photoUrl.split(',').last)) as ImageProvider)
+                      : null,
+                  child: (photoUrl == null || photoUrl.isEmpty) 
+                      ? Text(
+                          inicial,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )
+                      : null,
+                );
+              }
+            ),
           ]),
 
           const SizedBox(height: 24),
@@ -1145,3 +1193,313 @@ class _AppointmentsCarousel extends StatelessWidget {
     );
   }
 }
+
+// ── DASHBOARD DEL PSICÓLOGO ───────────────────────────────────────────────────
+class _PsychologistHomeTab extends StatelessWidget {
+  final String nombre;
+  final String uid;
+  final bool firestoreReady;
+
+  static const Color _primary  = Color(0xFF2B5BFF);
+  static const Color _bg       = Color(0xFFF4F6FB);
+  static const Color _textMain = Color(0xFF0D1B3E);
+  static const Color _textSub  = Color(0xFF8A94A6);
+
+  const _PsychologistHomeTab({
+    required this.nombre,
+    required this.uid,
+    required this.firestoreReady,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final first = nombre.split(' ').first.isNotEmpty ? nombre.split(' ').first : 'Doctor';
+    final inicial = first[0].toUpperCase();
+
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+          // ── HEADER ──────────────────────────────────────────────────────────
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('¡Hola, $first!',
+                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900,
+                    color: _textMain, letterSpacing: -0.5)),
+              const SizedBox(height: 2),
+              const Text('Panel del psicólogo',
+                style: TextStyle(fontSize: 13, color: _textSub)),
+            ]),
+            // Avatar
+            StreamBuilder<DocumentSnapshot>(
+              stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
+              builder: (context, snapshot) {
+                String? photoUrl;
+                if (snapshot.hasData && snapshot.data!.exists) {
+                  final data = snapshot.data!.data() as Map<String, dynamic>;
+                  photoUrl = data['photoUrl'];
+                }
+                return CircleAvatar(
+                  radius: 26,
+                  backgroundColor: _primary,
+                  backgroundImage: photoUrl != null && photoUrl.isNotEmpty
+                      ? (photoUrl.startsWith('http')
+                          ? NetworkImage(photoUrl)
+                          : MemoryImage(base64Decode(photoUrl.split(',').last)) as ImageProvider)
+                      : null,
+                  child: (photoUrl == null || photoUrl.isEmpty)
+                      ? Text(inicial, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold))
+                      : null,
+                );
+              },
+            ),
+          ]),
+
+          const SizedBox(height: 28),
+
+          // ── TARJETAS RESUMEN ─────────────────────────────────────────────────
+          StreamBuilder<QuerySnapshot>(
+            stream: firestoreReady
+                ? FirebaseFirestore.instance
+                    .collection('appointments')
+                    .where('psychologistId', isEqualTo: uid)
+                    .where('status', isEqualTo: 'scheduled')
+                    .snapshots()
+                : const Stream.empty(),
+            builder: (context, snap) {
+              final total = snap.data?.docs.length ?? 0;
+              final now = DateTime.now();
+              final todayStr = '${now.year}-${now.month.toString().padLeft(2,'0')}-${now.day.toString().padLeft(2,'0')}';
+              final todayCount = snap.data?.docs.where((d) {
+                final data = d.data() as Map<String, dynamic>;
+                return data['date'] == todayStr;
+              }).length ?? 0;
+
+              return Row(children: [
+                Expanded(child: _StatCard(
+                  icon: Icons.calendar_month_rounded,
+                  label: 'Citas hoy',
+                  value: '$todayCount',
+                  color: const Color(0xFF2B5BFF),
+                  light: const Color(0xFFEEF2FF),
+                )),
+                const SizedBox(width: 12),
+                Expanded(child: _StatCard(
+                  icon: Icons.people_rounded,
+                  label: 'Total pendientes',
+                  value: '$total',
+                  color: const Color(0xFF7C3AED),
+                  light: const Color(0xFFF5F3FF),
+                )),
+              ]);
+            },
+          ),
+
+          const SizedBox(height: 24),
+
+          // ── PRÓXIMAS CITAS DEL PSICÓLOGO ────────────────────────────────────
+          const Text('Próximas Citas',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: _textMain)),
+          const SizedBox(height: 14),
+
+          StreamBuilder<QuerySnapshot>(
+            stream: firestoreReady
+                ? FirebaseFirestore.instance
+                    .collection('appointments')
+                    .where('psychologistId', isEqualTo: uid)
+                    .where('status', isEqualTo: 'scheduled')
+                    .snapshots()
+                : const Stream.empty(),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator(color: _primary));
+              }
+              var docs = snap.data?.docs ?? [];
+              if (docs.isEmpty) {
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: const Column(children: [
+                    Icon(Icons.event_busy_rounded, color: Color(0xFFCBD5E1), size: 40),
+                    SizedBox(height: 10),
+                    Text('No tienes citas programadas',
+                      style: TextStyle(color: Color(0xFF8A94A6), fontSize: 13, fontWeight: FontWeight.w500)),
+                  ]),
+                );
+              }
+
+              // Ordenar por fecha
+              final sorted = List.from(docs)..sort((a, b) {
+                final ad = (a.data() as Map<String, dynamic>);
+                final bd = (b.data() as Map<String, dynamic>);
+                final aStr = '${ad['date']} ${ad['startTime']}:00';
+                final bStr = '${bd['date']} ${bd['startTime']}:00';
+                final aDt = DateTime.tryParse(aStr) ?? DateTime.now();
+                final bDt = DateTime.tryParse(bStr) ?? DateTime.now();
+                return aDt.compareTo(bDt);
+              });
+
+              return Column(
+                children: sorted.take(5).map((doc) {
+                  final d = doc.data() as Map<String, dynamic>;
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 3))],
+                    ),
+                    child: Row(children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEEF2FF),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(Icons.calendar_month_rounded, color: _primary, size: 24),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(d['patientName'] ?? 'Paciente',
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _textMain)),
+                          const SizedBox(height: 4),
+                          Text('${d['date'] ?? ''} · ${d['startTime'] ?? ''} - ${d['endTime'] ?? ''}',
+                            style: const TextStyle(fontSize: 12, color: _textSub)),
+                        ],
+                      )),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDCFCE7),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text('Confirmada',
+                          style: TextStyle(fontSize: 11, color: Color(0xFF16A34A), fontWeight: FontWeight.w600)),
+                      ),
+                    ]),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+
+          const SizedBox(height: 24),
+
+          // ── ACCESOS RÁPIDOS ──────────────────────────────────────────────────
+          const Text('Accesos Rápidos',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: _textMain)),
+          const SizedBox(height: 14),
+          Row(children: [
+            Expanded(child: _QuickAction(
+              icon: Icons.schedule_rounded,
+              label: 'Gestionar\nHorarios',
+              color: const Color(0xFF2B5BFF),
+              onTap: () {
+                // Navigate to tab 1 (Horarios)
+                final homeState = context.findAncestorStateOfType<_HomeScreenState>();
+                homeState?.setState(() => homeState._navIndex = 1);
+              },
+            )),
+            const SizedBox(width: 12),
+            Expanded(child: _QuickAction(
+              icon: Icons.calendar_today_rounded,
+              label: 'Ver todas\nlas citas',
+              color: const Color(0xFF7C3AED),
+              onTap: () {
+                final homeState = context.findAncestorStateOfType<_HomeScreenState>();
+                homeState?.setState(() => homeState._navIndex = 2);
+              },
+            )),
+            const SizedBox(width: 12),
+            Expanded(child: _QuickAction(
+              icon: Icons.person_outline_rounded,
+              label: 'Mi\nPerfil',
+              color: const Color(0xFF0891B2),
+              onTap: () {
+                final homeState = context.findAncestorStateOfType<_HomeScreenState>();
+                homeState?.setState(() => homeState._navIndex = 3);
+              },
+            )),
+          ]),
+
+          const SizedBox(height: 32),
+        ]),
+      ),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final String label, value;
+  final Color color, light;
+  const _StatCard({required this.icon, required this.label, required this.value, required this.color, required this.light});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(color: light, borderRadius: BorderRadius.circular(12)),
+          child: Icon(icon, color: color, size: 22),
+        ),
+        const SizedBox(height: 12),
+        Text(value, style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: color)),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF8A94A6), fontWeight: FontWeight.w500)),
+      ]),
+    );
+  }
+}
+
+class _QuickAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  const _QuickAction({required this.icon, required this.label, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        ),
+        child: Column(children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(height: 10),
+          Text(label, textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF0D1B3E)), maxLines: 2),
+        ]),
+      ),
+    );
+  }
+}
