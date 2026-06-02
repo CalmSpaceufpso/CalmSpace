@@ -101,6 +101,7 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
       final appointment = AppointmentModel(
         id: '', // Firestore will auto-generate
         psychologistId: widget.psychologist.id,
+        psychologistName: widget.psychologist.name,
         patientId: user.uid,
         slotId: _selectedSlot!.id,
         date: dateStr,
@@ -108,6 +109,7 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
         endTime: _selectedSlot!.endTime,
         status: 'scheduled',
         createdAt: DateTime.now(),
+        meetingUrl: 'https://meet.google.com/xyz-demo-abc', // Dummy data
       );
 
       await _repo.createAppointment(appointment);

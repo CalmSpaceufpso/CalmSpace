@@ -59,7 +59,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'name'     : _nameCtrl.text.trim(),
         'email'    : cred.user!.email,
         'role'     : _role,
-        'status'   : isPsi ? 'pendiente' : 'activo',
+        'status'   : 'activo', // TODO: Cambiar a 'pendiente' cuando se cree el panel de administrador
         'createdAt': FieldValue.serverTimestamp(),
         if (isPsi) ...{
           if (_licenseCtrl.text.isNotEmpty) 'license': _licenseCtrl.text.trim(),
@@ -68,7 +68,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
 
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, isPsi ? '/pending' : '/home');
+      Navigator.popUntil(context, (route) => route.isFirst);
     } on FirebaseAuthException catch (e) {
       _err(switch (e.code) {
         'weak-password'        => 'Contraseña muy débil (mín. 6 caracteres).',
