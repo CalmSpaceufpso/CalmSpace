@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:calm_space/screens/profile/patient_detail_screen.dart';
 import 'appointment_detail_screen.dart';
 
 class AgendaScreen extends StatefulWidget {
@@ -409,9 +410,24 @@ class _PsychologistAppointmentCardState
     final endTime     = d['endTime']      ?? '';
     final meetingUrl  = d['meetingUrl']   as String? ?? '';
     final hasLink     = meetingUrl.isNotEmpty;
+    final patientId   = d['patientId'] as String? ?? '';
 
-    return Container(
-      decoration: BoxDecoration(
+    return GestureDetector(
+      onTap: () {
+        if (patientId.isNotEmpty) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PatientDetailScreen(
+                patientId: patientId,
+                patientName: patientName,
+              ),
+            ),
+          );
+        }
+      },
+      child: Container(
+        decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
@@ -692,6 +708,7 @@ class _PsychologistAppointmentCardState
           ),
         ],
       ]),
+      ),
     );
   }
 

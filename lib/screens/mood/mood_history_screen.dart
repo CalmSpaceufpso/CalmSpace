@@ -83,8 +83,8 @@ class MoodData {
   }
 
   /// Carga optimizada: UNA sola query para obtener todos los registros del rango
-  static Future<Map<String, List<MoodEntry>>> loadRangeOptimized(int days) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+  static Future<Map<String, List<MoodEntry>>> loadRangeOptimized(int days, {String? patientId}) async {
+    final uid = patientId ?? FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return {};
 
     final startDate = DateTime.now().subtract(Duration(days: days));
@@ -189,7 +189,9 @@ class MoodInfo {
 // Pantalla principal de historial de ánimo
 // ─────────────────────────────────────────────────────────────────────────────
 class MoodHistoryScreen extends StatefulWidget {
-  const MoodHistoryScreen({super.key});
+  final String? patientId;
+
+  const MoodHistoryScreen({super.key, this.patientId});
   @override
   State<MoodHistoryScreen> createState() => _MoodHistoryScreenState();
 }
@@ -219,7 +221,7 @@ class _MoodHistoryScreenState extends State<MoodHistoryScreen>
 
   Future<void> _loadData() async {
     setState(() => _loading = true);
-    final data = await MoodData.loadRangeOptimized(90);
+    final data = await MoodData.loadRangeOptimized(90, patientId: widget.patientId);
     if (mounted) setState(() { _moodMap = data; _loading = false; });
   }
 
@@ -240,8 +242,8 @@ class _MoodHistoryScreenState extends State<MoodHistoryScreen>
           ),
         ),
         foregroundColor: Colors.white,
-        title: const Text('Mi Bienestar',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+        title: Text(widget.patientId != null ? 'Resumen Semanal' : 'Mi Bienestar',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
         centerTitle: true,
         bottom: TabBar(
           controller: _tabs,

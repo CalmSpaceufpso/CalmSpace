@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:calm_space/screens/profile/patient_detail_screen.dart';
 import 'mood/mood_history_screen.dart';
 import 'profile/view_profile_screen.dart';
 import 'psychologists/psychologist_catalog_screen.dart';
@@ -1348,48 +1349,82 @@ class _PsychologistHomeTab extends StatelessWidget {
               return Column(
                 children: sorted.take(5).map((doc) {
                   final d = doc.data() as Map<String, dynamic>;
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 3))],
+                  final patientId = d['patientId'] as String? ?? '';
+                  final patientName = d['patientName'] as String? ?? 'Paciente';
+                  
+                  return FutureBuilder<DocumentSnapshot>(
+                    future: FirebaseFirestore.instance.collection('users').doc(patientId).get(),
+                    builder: (context, userSnap) {
+                      String resolvedName = patientName;
+                      if (userSnap.hasData && userSnap.data!.exists) {
+                        final userData = userSnap.data!.data() as Map<String, dynamic>?;
+                        if (userData != null) {
+                          final realName = userData['name'] as String? ?? '';
+                          if (realName.isNotEmpty && (patientName == 'Paciente' || patientName.isEmpty)) {
+                            resolvedName = realName;
+                          }
+                        }
+                      }
+
+                      return GestureDetector(
+                        onTap: () {
+                          if (patientId.isNotEmpty) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => PatientDetailScreen(
+                                  patientId: patientId,
+                                  patientName: resolvedName,
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 3))],
+                          ),
+                          child: Row(children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEEF2FF),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: const Icon(Icons.calendar_month_rounded, color: _primary, size: 24),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(resolvedName,
+                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _textMain)),
+                                const SizedBox(height: 4),
+                                Text('${d['date'] ?? ''} · ${d['startTime'] ?? ''} - ${d['endTime'] ?? ''}',
+                                  style: const TextStyle(fontSize: 12, color: _textSub)),
+                              ],
+                            )),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDCFCE7),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text('Confirmada',
+                            style: TextStyle(fontSize: 11, color: Color(0xFF16A34A), fontWeight: FontWeight.w600)),
+                        ),
+                      ]),
                     ),
-                    child: Row(children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEEF2FF),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Icon(Icons.calendar_month_rounded, color: _primary, size: 24),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(d['patientName'] ?? 'Paciente',
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _textMain)),
-                          const SizedBox(height: 4),
-                          Text('${d['date'] ?? ''} · ${d['startTime'] ?? ''} - ${d['endTime'] ?? ''}',
-                            style: const TextStyle(fontSize: 12, color: _textSub)),
-                        ],
-                      )),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFDCFCE7),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Text('Confirmada',
-                          style: TextStyle(fontSize: 11, color: Color(0xFF16A34A), fontWeight: FontWeight.w600)),
-                      ),
-                    ]),
                   );
-                }).toList(),
-              );
-            },
+                 },
+                );
+              }).toList(),
+            );
+          },
           ),
 
           const SizedBox(height: 24),
