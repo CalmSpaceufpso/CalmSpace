@@ -1,6 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../models/user_profile.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -21,6 +24,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
   String _role = 'Paciente';
+  String? _photoUrl;
 
   late TextEditingController _nameCtrl;
   late TextEditingController _phoneCtrl;
@@ -81,6 +85,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         final p = UserProfile.fromMap(uid, doc.data()!);
         setState(() {
           _role = p.role;
+          _photoUrl = p.photoUrl;
           _nameCtrl.text        = p.fullName;
           _phoneCtrl.text       = p.phone ?? '';
           _birthCtrl.text       = p.birthDate ?? '';
@@ -109,6 +114,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         uid: uid,
         fullName: _nameCtrl.text.trim(),
         role: _role,
+        photoUrl: _photoUrl,
         phone: isPsi ? null : _phoneCtrl.text.trim(),
         birthDate: isPsi ? null : _birthCtrl.text.trim(),
         gender: isPsi ? null : _genderCtrl.text.trim(),
@@ -135,6 +141,33 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
     } finally {
       if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 300,
+        maxHeight: 300,
+        imageQuality: 40,
+      );
+
+      if (image != null) {
+        final Uint8List imageBytes = await image.readAsBytes();
+        final String base64String = base64Encode(imageBytes);
+        
+        setState(() {
+          _photoUrl = 'data:image/jpeg;base64,$base64String';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al seleccionar imagen: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -211,30 +244,40 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             children: [
               // ── AVATAR ──────────────────────────────────────
               const SizedBox(height: 12),
-              Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 60,
-                    backgroundColor: _primary,
-                    child: Text(
-                      inicial,
-                      style: const TextStyle(
-                        fontSize: 48, color: Colors.white, fontWeight: FontWeight.bold,
+              GestureDetector(
+                onTap: _pickImage,
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 60,
+                      backgroundColor: _primary,
+                      backgroundImage: _photoUrl != null
+                          ? (_photoUrl!.startsWith('http')
+                              ? NetworkImage(_photoUrl!)
+                              : MemoryImage(base64Decode(_photoUrl!.split(',').last)) as ImageProvider)
+                          : null,
+                      child: _photoUrl == null
+                          ? Text(
+                              inicial,
+                              style: const TextStyle(
+                                fontSize: 48, color: Colors.white, fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          : null,
+                    ),
+                    Positioned(
+                      bottom: 0, right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: _primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
                       ),
                     ),
-                  ),
-                  Positioned(
-                    bottom: 0, right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: _primary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 28),
 

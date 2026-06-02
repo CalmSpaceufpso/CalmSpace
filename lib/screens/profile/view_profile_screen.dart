@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -119,12 +120,19 @@ class _OwnProfileView extends StatelessWidget {
                     child: CircleAvatar(
                       radius: 52,
                       backgroundColor: const Color(0xFF1D4ED8),
-                      child: Text(
-                        inicial,
-                        style: const TextStyle(
-                          fontSize: 42, color: Colors.white, fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      backgroundImage: profile.photoUrl != null && profile.photoUrl!.isNotEmpty
+                          ? (profile.photoUrl!.startsWith('http')
+                              ? NetworkImage(profile.photoUrl!)
+                              : MemoryImage(base64Decode(profile.photoUrl!.split(',').last)) as ImageProvider)
+                          : null,
+                      child: (profile.photoUrl == null || profile.photoUrl!.isEmpty)
+                          ? Text(
+                              inicial,
+                              style: const TextStyle(
+                                fontSize: 42, color: Colors.white, fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          : null,
                     ),
                   ),
 
@@ -395,8 +403,14 @@ class _PublicPsychologistViewState extends State<_PublicPsychologistView> {
               child: CircleAvatar(
                 radius: 70,
                 backgroundColor: _primary,
-                child: Text(inicial,
-                    style: const TextStyle(fontSize: 56, color: Colors.white, fontWeight: FontWeight.bold)),
+                backgroundImage: profile.photoUrl != null && profile.photoUrl!.isNotEmpty
+                    ? (profile.photoUrl!.startsWith('http')
+                        ? NetworkImage(profile.photoUrl!)
+                        : MemoryImage(base64Decode(profile.photoUrl!.split(',').last)) as ImageProvider)
+                    : null,
+                child: (profile.photoUrl == null || profile.photoUrl!.isEmpty)
+                    ? Text(inicial, style: const TextStyle(fontSize: 56, color: Colors.white, fontWeight: FontWeight.bold))
+                    : null,
               ),
             ),
             const SizedBox(height: 16),

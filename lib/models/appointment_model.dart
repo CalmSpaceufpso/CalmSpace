@@ -5,6 +5,7 @@ class AppointmentModel {
   final String psychologistId;
   final String psychologistName;
   final String patientId;
+  final String patientName;
   final String slotId;
   final String date;
   final String startTime;
@@ -18,6 +19,7 @@ class AppointmentModel {
     required this.psychologistId,
     required this.psychologistName,
     required this.patientId,
+    required this.patientName,
     required this.slotId,
     required this.date,
     required this.startTime,
@@ -33,6 +35,7 @@ class AppointmentModel {
       psychologistId: data['psychologistId'] ?? '',
       psychologistName: data['psychologistName'] ?? '',
       patientId: data['patientId'] ?? '',
+      patientName: data['patientName'] ?? 'Paciente',
       slotId: data['slotId'] ?? '',
       date: data['date'] ?? '',
       startTime: data['startTime'] ?? '',
@@ -48,6 +51,7 @@ class AppointmentModel {
       'psychologistId': psychologistId,
       'psychologistName': psychologistName,
       'patientId': patientId,
+      'patientName': patientName,
       'slotId': slotId,
       'date': date,
       'startTime': startTime,
