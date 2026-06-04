@@ -9,8 +9,13 @@ import '../availability/manage_availability_screen.dart' show ScheduleSlot;
 
 class ScheduleAppointmentScreen extends StatefulWidget {
   final PsychologistModel psychologist;
+  final String? appointmentIdToReschedule;
 
-  const ScheduleAppointmentScreen({super.key, required this.psychologist});
+  const ScheduleAppointmentScreen({
+    super.key, 
+    required this.psychologist,
+    this.appointmentIdToReschedule,
+  });
 
   @override
   State<ScheduleAppointmentScreen> createState() => _ScheduleAppointmentScreenState();
@@ -121,12 +126,26 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
         meetingUrl: 'https://meet.google.com/xyz-demo-abc', // Dummy data
       );
 
-      await _repo.createAppointment(appointment);
+      if (widget.appointmentIdToReschedule != null) {
+        await _repo.rescheduleAppointment(
+          widget.appointmentIdToReschedule!,
+          dateStr,
+          _selectedSlot!.startTime,
+          _selectedSlot!.endTime,
+          _selectedSlot!.id,
+        );
+      } else {
+        await _repo.createAppointment(appointment);
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('¡Cita agendada con éxito para el ${DateFormat('dd/MM/yyyy').format(_selectedDate)} a las ${_selectedSlot!.startTime}!'),
+            content: Text(
+              widget.appointmentIdToReschedule != null
+                ? '¡Cita reprogramada con éxito para el ${DateFormat('dd/MM/yyyy').format(_selectedDate)} a las ${_selectedSlot!.startTime}!'
+                : '¡Cita agendada con éxito para el ${DateFormat('dd/MM/yyyy').format(_selectedDate)} a las ${_selectedSlot!.startTime}!'
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -152,7 +171,7 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(
-        title: const Text('Agendar Cita', style: TextStyle(color: _textMain, fontWeight: FontWeight.bold)),
+        title: Text(widget.appointmentIdToReschedule != null ? 'Reprogramar Cita' : 'Agendar Cita', style: const TextStyle(color: _textMain, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: _textMain),
@@ -321,7 +340,7 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
                   ),
                   child: _saving 
                     ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : const Text('Confirmar Cita', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                    : Text(widget.appointmentIdToReschedule != null ? 'Reprogramar Cita' : 'Confirmar Cita', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ),
             ),

@@ -120,7 +120,7 @@ class _AgendaScreenState extends State<AgendaScreen>
               _isPsi ? 'psychologistId' : 'patientId',
               isEqualTo: user.uid,
             )
-            .where('status', isEqualTo: 'scheduled')
+            .where('status', whereIn: ['scheduled', 'cancelled'])
             .snapshots(),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
@@ -141,9 +141,12 @@ class _AgendaScreenState extends State<AgendaScreen>
 
           for (var doc in docs) {
             final data = doc.data() as Map<String, dynamic>;
-            final dt = DateTime.tryParse(
-                '${data['date'] ?? ''} ${data['startTime'] ?? ''}:00');
-            if (dt != null && dt.isBefore(now.subtract(const Duration(hours: 1)))) {
+            final dt = DateTime.tryParse('${data['date'] ?? ''} ${data['startTime'] ?? ''}:00');
+            final status = data['status'] as String? ?? 'scheduled';
+            
+            if (status == 'cancelled') {
+              past.add(doc);
+            } else if (dt != null && dt.isBefore(now.subtract(const Duration(hours: 1)))) {
               past.add(doc);
             } else {
               upcoming.add(doc);
@@ -221,6 +224,7 @@ class _AgendaScreenState extends State<AgendaScreen>
                 isPast: isPast,
               )
             : _PatientAppointmentCard(
+                appointmentId: doc.id,
                 data: d,
                 isPast: isPast,
               );
@@ -231,25 +235,29 @@ class _AgendaScreenState extends State<AgendaScreen>
 
 // ── TARJETA VISTA PACIENTE ────────────────────────────────────────────────────
 class _PatientAppointmentCard extends StatelessWidget {
+  final String appointmentId;
   final Map<String, dynamic> data;
   final bool isPast;
   static const Color _primary  = Color(0xFF2B5BFF);
   static const Color _textMain = Color(0xFF0D1B3E);
   static const Color _textSub  = Color(0xFF8A94A6);
 
-  const _PatientAppointmentCard({required this.data, required this.isPast});
+  const _PatientAppointmentCard({required this.appointmentId, required this.data, required this.isPast});
 
   @override
   Widget build(BuildContext context) {
     final psychName = data['psychologistName'] ?? 'Psicólogo';
     final date      = data['date']      ?? '';
     final time      = data['startTime'] ?? '';
+    final status    = data['status']    ?? 'scheduled';
+    final isCancelled = status == 'cancelled';
 
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => AppointmentDetailScreen(
+            appointmentId: appointmentId,
             appointmentData: data,
             isPast: isPast,
           ),
@@ -287,10 +295,14 @@ class _PatientAppointmentCard extends StatelessWidget {
                         fontSize: 16, fontWeight: FontWeight.bold, color: _textMain)),
                 const SizedBox(height: 4),
                 Text(
-                  isPast ? 'Cita finalizada' : 'Cita confirmada',
+                  isCancelled 
+                      ? 'Cita cancelada'
+                      : (isPast ? 'Cita finalizada' : 'Cita confirmada'),
                   style: TextStyle(
                       fontSize: 13,
-                      color: isPast ? _textSub : const Color(0xFF22C55E),
+                      color: isCancelled 
+                          ? Colors.red 
+                          : (isPast ? _textSub : const Color(0xFF22C55E)),
                       fontWeight: FontWeight.w600),
                 ),
               ]),
@@ -304,7 +316,7 @@ class _PatientAppointmentCard extends StatelessWidget {
             const SizedBox(width: 16),
             _chip(Icons.access_time_rounded, time),
           ]),
-          if (!isPast) ...[
+          if (!isPast && !isCancelled) ...[
             const SizedBox(height: 16),
             _JoinButton(meetingUrl: data['meetingUrl'] as String?),
           ],
@@ -411,6 +423,8 @@ class _PsychologistAppointmentCardState
     final meetingUrl  = d['meetingUrl']   as String? ?? '';
     final hasLink     = meetingUrl.isNotEmpty;
     final patientId   = d['patientId'] as String? ?? '';
+    final status      = d['status'] as String? ?? 'scheduled';
+    final isCancelled = status == 'cancelled';
 
     return GestureDetector(
       onTap: () {
@@ -478,10 +492,14 @@ class _PsychologistAppointmentCardState
                         color: _textMain)),
                 const SizedBox(height: 4),
                 Text(
-                  widget.isPast ? 'Cita finalizada' : 'Paciente agendado',
+                  isCancelled 
+                      ? 'Paciente canceló'
+                      : (widget.isPast ? 'Cita finalizada' : 'Paciente agendado'),
                   style: TextStyle(
                       fontSize: 13,
-                      color: widget.isPast ? _textSub : _success,
+                      color: isCancelled 
+                          ? Colors.red 
+                          : (widget.isPast ? _textSub : _success),
                       fontWeight: FontWeight.w600),
                 ),
               ]),
@@ -496,10 +514,14 @@ class _PsychologistAppointmentCardState
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                widget.isPast ? 'Pasada' : 'Próxima',
+                isCancelled 
+                    ? 'Cancelada'
+                    : (widget.isPast ? 'Pasada' : 'Próxima'),
                 style: TextStyle(
                     fontSize: 11,
-                    color: widget.isPast ? _textSub : _primary,
+                    color: isCancelled 
+                        ? Colors.red 
+                        : (widget.isPast ? _textSub : _primary),
                     fontWeight: FontWeight.w700),
               ),
             ),
@@ -520,7 +542,7 @@ class _PsychologistAppointmentCardState
           ]),
         ),
 
-        if (!widget.isPast) ...[
+        if (!widget.isPast && !isCancelled) ...[
           const Divider(height: 1, color: Color(0xFFF1F5F9)),
 
           // ── Sección del link ─────────────────────────────────────────────

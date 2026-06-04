@@ -41,4 +41,19 @@ class AppointmentRepository {
   Future<void> createAppointment(AppointmentModel appointment) async {
     await _firestore.collection('appointments').add(appointment.toMap());
   }
+
+  Future<void> cancelAppointment(String appointmentId) async {
+    await _firestore.collection('appointments').doc(appointmentId).update({
+      'status': 'cancelled',
+    });
+  }
+
+  Future<void> rescheduleAppointment(String appointmentId, String newDate, String newStartTime, String newEndTime, String newSlotId) async {
+    await _firestore.collection('appointments').doc(appointmentId).update({
+      'date': newDate,
+      'startTime': newStartTime,
+      'endTime': newEndTime,
+      'slotId': newSlotId,
+    });
+  }
 }
