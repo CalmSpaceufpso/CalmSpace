@@ -123,14 +123,44 @@ class _AppointmentHistoryScreenState extends State<AppointmentHistoryScreen>
                 }
 
                 if (snapshot.hasError) {
-                  return const _EmptyState(
-                    icon: Icons.wifi_off_rounded,
-                    title: 'No se pudo cargar el historial',
-                    message:
-                        'Revisa tu conexión. Si ya habías abierto esta pantalla, Firestore intentará usar datos en caché.',
-                  );
-                }
-
+  return Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.wifi_off_rounded,
+            size: 64,
+            color: Colors.red,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'No se pudo cargar el historial',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Revisa tu conexión e inténtalo nuevamente.',
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () {
+              setState(() {});
+            },
+            icon: const Icon(Icons.refresh),
+            label: const Text('Reintentar'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
                 final appointments = _historyAppointments(snapshot);
                 final all = appointments;
                 final completed = appointments
