@@ -11,6 +11,7 @@ import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/profile/view_profile_screen.dart';
 import 'screens/availability/manage_availability_screen.dart';
+import 'screens/appointments/appointment_history_screen.dart';
 import 'screens/psychologists/psychologist_catalog_screen.dart';
 
 void main() async {
@@ -19,6 +20,10 @@ void main() async {
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
+    );
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
     );
     firestoreReady = true;
   } catch (_) {}
@@ -40,18 +45,17 @@ class CalmSpaceApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           primaryColor: const Color(0xFF1D35B4),
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF1D35B4),
-          ),
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1D35B4)),
           scaffoldBackgroundColor: const Color(0xFFF4F6FB),
           useMaterial3: true,
         ),
         routes: {
-          '/login':       (context) => const LoginScreen(),
-          '/register':    (context) => const RegisterScreen(),
-          '/psicologos':  (context) => const PsychologistCatalogScreen(),
-          '/disponibilidad': (context) => ManageAvailabilityScreen(
-                firestoreReady: firestoreReady),
+          '/login': (context) => const LoginScreen(),
+          '/register': (context) => const RegisterScreen(),
+          '/psicologos': (context) => const PsychologistCatalogScreen(),
+          '/historial-citas': (context) => const AppointmentHistoryScreen(),
+          '/disponibilidad': (context) =>
+              ManageAvailabilityScreen(firestoreReady: firestoreReady),
           '/perfil': (context) {
             final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
             return ViewProfileScreen(uid: uid, isOwnProfile: true);
@@ -87,7 +91,9 @@ class CalmSpaceApp extends StatelessWidget {
                   return const Scaffold(
                     backgroundColor: Color(0xFFF4F6FB),
                     body: Center(
-                      child: CircularProgressIndicator(color: Color(0xFF1D35B4)),
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF1D35B4),
+                      ),
                     ),
                   );
                 }
@@ -98,8 +104,8 @@ class CalmSpaceApp extends StatelessWidget {
                 }
 
                 if (userSnap.hasData && userSnap.data!.exists) {
-                  final data   = userSnap.data!.data() as Map<String, dynamic>;
-                  final role   = data['role']   ?? 'Paciente';
+                  final data = userSnap.data!.data() as Map<String, dynamic>;
+                  final role = data['role'] ?? 'Paciente';
                   final status = data['status'] ?? 'activo';
 
                   if (role == 'Psicólogo' &&
@@ -130,14 +136,20 @@ class _PendingScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.hourglass_top_rounded,
-                  size: 64, color: Color(0xFF1D35B4)),
+              const Icon(
+                Icons.hourglass_top_rounded,
+                size: 64,
+                color: Color(0xFF1D35B4),
+              ),
               const SizedBox(height: 20),
-              const Text('Cuenta en revisión',
-                  style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E293B))),
+              const Text(
+                'Cuenta en revisión',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
               const SizedBox(height: 10),
               const Text(
                 'Tu cuenta de psicólogo está siendo verificada.\nTe notificaremos cuando sea aprobada.',

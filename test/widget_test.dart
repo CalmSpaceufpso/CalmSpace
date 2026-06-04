@@ -12,16 +12,16 @@ void main() {
         ),
       );
 
-      expect(find.text('Gestionar disponibilidad'), findsOneWidget);
-      expect(find.text('Disponibilidad semanal'), findsOneWidget);
+      expect(find.text('Mi Disponibilidad'), findsOneWidget);
+      expect(find.text('Selecciona tus horarios disponibles'), findsOneWidget);
       expect(find.text('Lunes'), findsOneWidget);
       expect(find.text('08:00 - 09:00'), findsWidgets);
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Guardar horarios'));
+      await tester.tap(find.text('Selecciona horarios primero'));
       await tester.pump();
 
       expect(
-        find.text('Debes seleccionar al menos un horario disponible.'),
+        find.text('Selecciona al menos un horario disponible.'),
         findsOneWidget,
       );
     },
