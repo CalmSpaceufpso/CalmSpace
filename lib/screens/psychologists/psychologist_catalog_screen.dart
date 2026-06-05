@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/psychologist_model.dart';
 import '../../providers/psychologist_provider.dart';
+import '../../services/micro_intervention_service.dart';
 import 'psychologist_detail_screen.dart';
 import 'widgets/psychologist_card.dart';
 import 'widgets/search_bar_widget.dart';
@@ -101,11 +103,34 @@ class _PsychologistCatalogScreenState
           ],
         ),
         actions: [
-          IconButton(
-            onPressed: () => SeedData.injectDummyPsychologists(context),
-            icon: const Icon(Icons.bug_report, color: Colors.redAccent),
-            tooltip: 'Inyectar Data (Dev)',
-          ),
+          if (kDebugMode)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.bug_report, color: Colors.redAccent),
+              tooltip: 'Inyectar Data (Dev)',
+              onSelected: (value) async {
+                if (value == 'psicologos') {
+                  SeedData.injectDummyPsychologists(context);
+                } else if (value == 'intervenciones') {
+                  SeedData.injectMicroInterventions(context);
+                } else if (value == 'test_notificacion') {
+                  await MicroInterventionService.instance.sendTestIntervention();
+                }
+              },
+              itemBuilder: (BuildContext context) => [
+                const PopupMenuItem(
+                  value: 'psicologos',
+                  child: Text('Inyectar Psicólogos'),
+                ),
+                const PopupMenuItem(
+                  value: 'intervenciones',
+                  child: Text('Inyectar Micro-intervenciones'),
+                ),
+                const PopupMenuItem(
+                  value: 'test_notificacion',
+                  child: Text('Probar Notificación Ahora'),
+                ),
+              ],
+            ),
           IconButton(
             onPressed: _load,
             icon: const Icon(Icons.refresh_rounded, color: _primary),

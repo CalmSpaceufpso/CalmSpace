@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:calm_space/screens/profile/patient_detail_screen.dart';
 import '../services/notification_service.dart';
+import '../services/micro_intervention_service.dart';
 import 'mood/mood_history_screen.dart';
 import 'profile/view_profile_screen.dart';
 import 'psychologists/psychologist_catalog_screen.dart';
@@ -33,6 +34,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   double? _todayAverage;
 
   String _moodReminderTime = '20:00'; // Default 8:00 PM
+  
+  bool _microInterventionsEnabled = false;
+  List<String> _preferredInterventionTimes = [];
+  String? _supportCategory;
 
   // Animación del check de confirmación
   late AnimationController _checkAnimCtrl;
@@ -74,6 +79,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           _nombre = d['fullName'] ?? d['name'] ?? user.displayName ?? _email;
           _email  = d['email']   ?? _email;
           _moodReminderTime = d['moodReminderTime'] ?? '20:00';
+          _microInterventionsEnabled = d['microInterventionsEnabled'] ?? false;
+          _preferredInterventionTimes = List<String>.from(d['preferredInterventionTimes'] ?? []);
+          _supportCategory = d['supportCategory'];
           _loading = false;
         });
 
@@ -96,6 +104,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               skipToday: _todayCount > 0, // Si ya registró hoy, saltar
             );
           }
+          
+          MicroInterventionService.instance.syncInterventions();
         }
       }
     } catch (_) { if (mounted) setState(() => _loading = false); }
@@ -307,6 +317,148 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (ok == true) await FirebaseAuth.instance.signOut();
   }
 
+  void _showMicroInterventionsBottomSheet() {
+    bool tempEnabled = _microInterventionsEnabled;
+    String? tempCategory = _supportCategory;
+    List<String> tempTimes = List.from(_preferredInterventionTimes);
+
+    final List<String> categories = ['Ansiedad', 'Depresión', 'Estrés', 'Autoestima', 'Duelo', 'General'];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40, height: 4,
+                          decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Row(
+                        children: [
+                          Icon(Icons.self_improvement, color: Color(0xFF2B5BFF), size: 28),
+                          SizedBox(width: 12),
+                          Text('Apoyo Diario', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF111827))),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text('Recibe mensajes motivacionales diseñados para mejorar tu estado de ánimo.',
+                        style: TextStyle(fontSize: 14, color: Color(0xFF64748B))),
+                      const SizedBox(height: 20),
+                      
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Activar mensajes de apoyo', style: TextStyle(fontWeight: FontWeight.w600)),
+                        value: tempEnabled,
+                        activeColor: const Color(0xFF2B5BFF),
+                        onChanged: (val) => setModalState(() => tempEnabled = val),
+                      ),
+                      
+                      if (tempEnabled) ...[
+                        const SizedBox(height: 16),
+                        const Text('¿En qué área necesitas apoyo?', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF4F6FB),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: tempCategory,
+                              isExpanded: true,
+                              hint: const Text('Selecciona una categoría'),
+                              icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF2B5BFF)),
+                              items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                              onChanged: (v) => setModalState(() => tempCategory = v),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        
+                        const Text('¿En qué momentos del día?', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 12,
+                          children: ['Mañana', 'Tarde', 'Noche'].map((t) => FilterChip(
+                            label: Text(t),
+                            selected: tempTimes.contains(t),
+                            selectedColor: const Color(0xFF2B5BFF).withOpacity(0.15),
+                            checkmarkColor: const Color(0xFF2B5BFF),
+                            onSelected: (selected) {
+                              setModalState(() {
+                                if (selected) tempTimes.add(t);
+                                else tempTimes.remove(t);
+                              });
+                            },
+                          )).toList(),
+                        ),
+                      ],
+                      const SizedBox(height: 32),
+                      
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2B5BFF),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: () async {
+                            final uid = FirebaseAuth.instance.currentUser?.uid;
+                            if (uid != null) {
+                              await FirebaseFirestore.instance.collection('users').doc(uid).set({
+                                'microInterventionsEnabled': tempEnabled,
+                                'supportCategory': tempCategory,
+                                'preferredInterventionTimes': tempTimes,
+                              }, SetOptions(merge: true));
+                              
+                              if (mounted) {
+                                setState(() {
+                                  _microInterventionsEnabled = tempEnabled;
+                                  _supportCategory = tempCategory;
+                                  _preferredInterventionTimes = List.from(tempTimes);
+                                });
+                              }
+                              
+                              MicroInterventionService.instance.syncInterventions();
+                            }
+                            if (ctx.mounted) Navigator.pop(ctx);
+                          },
+                          child: const Text('Guardar configuración', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -337,7 +489,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         onLogout: _logout,
         onViewAllPsychologists: () => setState(() => _navIndex = 1),
         moodReminderTime: _moodReminderTime,
-        onChangeReminderTime: (newTime) => setState(() => _moodReminderTime = newTime),
+        onChangeReminderTime: (time) => setState(() => _moodReminderTime = time),
+        microInterventionsEnabled: _microInterventionsEnabled,
+        supportCategory: _supportCategory ?? 'General',
+        onMicroInterventionsTap: _showMicroInterventionsBottomSheet,
       ),
       const PsychologistCatalogScreen(),
       const AgendaScreen(),
@@ -428,6 +583,9 @@ class _HomeTab extends StatelessWidget {
   final VoidCallback onViewAllPsychologists;
   final String moodReminderTime;
   final ValueChanged<String> onChangeReminderTime;
+  final bool microInterventionsEnabled;
+  final String supportCategory;
+  final VoidCallback onMicroInterventionsTap;
 
   static const Color _primary  = Color(0xFF2B5BFF);
   static const Color _textMain = Color(0xFF0D1B3E);
@@ -442,6 +600,9 @@ class _HomeTab extends StatelessWidget {
     required this.onViewAllPsychologists,
     required this.moodReminderTime,
     required this.onChangeReminderTime,
+    required this.microInterventionsEnabled,
+    required this.supportCategory,
+    required this.onMicroInterventionsTap,
   });
 
   @override
@@ -832,6 +993,53 @@ class _HomeTab extends StatelessWidget {
           ),
 
           const SizedBox(height: 24),
+
+          // BANNER DE MICRO-INTERVENCIONES
+          GestureDetector(
+            onTap: onMicroInterventionsTap,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF2B5BFF), Color(0xFF1E40AF)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(color: const Color(0xFF2B5BFF).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.favorite, color: Colors.white, size: 24),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Apoyo Diario', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                        const SizedBox(height: 4),
+                        Text(
+                          microInterventionsEnabled ? 'Apoyo activado · $supportCategory' : 'Toca aquí para recibir apoyo diario',
+                          style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: Colors.white),
+                ],
+              ),
+            ),
+          ),
 
           // CAROUSEL DE MENSAJES MOTIVACIONALES (REDISEÑADO)
           const _MotivationalCarousel(),

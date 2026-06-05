@@ -12,6 +12,9 @@ class UserProfile {
   final String? gender;
   final String? supportReason; // max 300
   final String? moodReminderTime; // Format: "HH:mm"
+  final bool microInterventionsEnabled;
+  final List<String> preferredInterventionTimes; // e.g. ['Mañana', 'Tarde', 'Noche']
+  final String? supportCategory;
 
   // Campos para Psicólogo
   final String? specialty;
@@ -36,6 +39,9 @@ class UserProfile {
     this.description,
     this.contactPhone,
     this.moodReminderTime,
+    this.microInterventionsEnabled = false,
+    this.preferredInterventionTimes = const [],
+    this.supportCategory,
   });
 
   factory UserProfile.fromMap(String uid, Map<String, dynamic> data) {
@@ -55,6 +61,9 @@ class UserProfile {
       description: data['description'],
       contactPhone: data['contactPhone'],
       moodReminderTime: data['moodReminderTime'],
+      microInterventionsEnabled: data['microInterventionsEnabled'] ?? false,
+      preferredInterventionTimes: List<String>.from(data['preferredInterventionTimes'] ?? []),
+      supportCategory: data['supportCategory'],
     );
   }
 
@@ -74,6 +83,9 @@ class UserProfile {
       'description': description,
       'contactPhone': contactPhone,
       'moodReminderTime': moodReminderTime,
+      'microInterventionsEnabled': microInterventionsEnabled,
+      'preferredInterventionTimes': preferredInterventionTimes,
+      'supportCategory': supportCategory,
     }..removeWhere((key, value) => value == null);
   }
 }
