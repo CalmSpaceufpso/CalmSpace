@@ -36,6 +36,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _modalityCtrl;
   late TextEditingController _descCtrl;
   late TextEditingController _contactPhoneCtrl;
+  late TextEditingController _priceCtrl;
 
   String? _emailFromAuth;
 
@@ -63,6 +64,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _modalityCtrl    = TextEditingController();
     _descCtrl        = TextEditingController();
     _contactPhoneCtrl = TextEditingController();
+    _priceCtrl       = TextEditingController();
     _emailFromAuth   = FirebaseAuth.instance.currentUser?.email;
     _loadProfile();
   }
@@ -72,7 +74,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _nameCtrl.dispose(); _phoneCtrl.dispose(); _birthCtrl.dispose();
     _genderCtrl.dispose(); _reasonCtrl.dispose(); _specialtyCtrl.dispose();
     _yearsCtrl.dispose(); _modalityCtrl.dispose(); _descCtrl.dispose();
-    _contactPhoneCtrl.dispose();
+    _contactPhoneCtrl.dispose(); _priceCtrl.dispose();
     super.dispose();
   }
 
@@ -96,6 +98,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           _modalityCtrl.text    = p.modality ?? '';
           _descCtrl.text        = p.description ?? '';
           _contactPhoneCtrl.text = p.contactPhone ?? '';
+          _priceCtrl.text       = p.pricePerSession?.toInt().toString() ?? '';
         });
       }
     } finally {
@@ -110,25 +113,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (uid == null) return;
     try {
       final isPsi = _role == 'Psicólogo';
-      final profile = UserProfile(
-        uid: uid,
-        fullName: _nameCtrl.text.trim(),
-        role: _role,
-        photoUrl: _photoUrl,
-        phone: isPsi ? null : _phoneCtrl.text.trim(),
-        birthDate: isPsi ? null : _birthCtrl.text.trim(),
-        gender: isPsi ? null : _genderCtrl.text.trim(),
-        supportReason: isPsi ? null : _reasonCtrl.text.trim(),
-        specialty: isPsi ? _specialtyCtrl.text.trim() : null,
-        experienceYears: isPsi ? int.tryParse(_yearsCtrl.text.trim()) : null,
-        modality: isPsi ? _modalityCtrl.text.trim() : null,
-        description: isPsi ? _descCtrl.text.trim() : null,
-        contactPhone: isPsi ? _contactPhoneCtrl.text.trim() : null,
-      );
+      final profileData = {
+        'fullName': _nameCtrl.text.trim(),
+        'role': _role,
+        'photoUrl': _photoUrl,
+        'phone': isPsi ? null : _phoneCtrl.text.trim(),
+        'birthDate': isPsi ? null : _birthCtrl.text.trim(),
+        'gender': isPsi ? null : _genderCtrl.text.trim(),
+        'supportReason': isPsi ? null : _reasonCtrl.text.trim(),
+        'specialty': isPsi ? _specialtyCtrl.text.trim() : null,
+        'experienceYears': isPsi ? int.tryParse(_yearsCtrl.text.trim()) : null,
+        'modality': _modalityCtrl.text.trim(),
+        'description': _descCtrl.text.trim(),
+        'contactPhone': _contactPhoneCtrl.text.trim(),
+        'pricePerSession': double.tryParse(_priceCtrl.text.trim()),
+      };
       await FirebaseFirestore.instance
           .collection('users')
           .doc(uid)
-          .set(profile.toMap(), SetOptions(merge: true));
+          .set(profileData, SetOptions(merge: true));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Perfil guardado'), backgroundColor: Color(0xFF6BAE8E)),
@@ -335,6 +338,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   maxLines: 4,
                   maxLength: 500,
                   validator: (v) => v!.isEmpty ? 'Requerido' : null,
+                ),
+                _CardField(
+                  label: 'Precio por sesión (COP)',
+                  controller: _priceCtrl,
+                  keyboardType: TextInputType.number,
+                  hint: 'Ej. 50000',
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return null; // opcional
+                    if (double.tryParse(v) == null) return 'Debe ser numérico';
+                    return null;
+                  },
                 ),
               ],
 

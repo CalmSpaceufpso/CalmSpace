@@ -22,6 +22,7 @@ class UserProfile {
   final String? modality; // presencial, virtual, ambas
   final String? description; // max 500
   final String? contactPhone;
+  final double? pricePerSession;
 
   UserProfile({
     required this.uid,
@@ -42,6 +43,7 @@ class UserProfile {
     this.microInterventionsEnabled = false,
     this.preferredInterventionTimes = const [],
     this.supportCategory,
+    this.pricePerSession,
   });
 
   factory UserProfile.fromMap(String uid, Map<String, dynamic> data) {
@@ -60,6 +62,7 @@ class UserProfile {
       modality: data['modality'],
       description: data['description'],
       contactPhone: data['contactPhone'],
+      pricePerSession: (data['pricePerSession'] as num?)?.toDouble(),
       moodReminderTime: data['moodReminderTime'],
       microInterventionsEnabled: data['microInterventionsEnabled'] ?? false,
       preferredInterventionTimes: List<String>.from(data['preferredInterventionTimes'] ?? []),
@@ -82,6 +85,7 @@ class UserProfile {
       'modality': modality,
       'description': description,
       'contactPhone': contactPhone,
+      'pricePerSession': pricePerSession,
       'moodReminderTime': moodReminderTime,
       'microInterventionsEnabled': microInterventionsEnabled,
       'preferredInterventionTimes': preferredInterventionTimes,

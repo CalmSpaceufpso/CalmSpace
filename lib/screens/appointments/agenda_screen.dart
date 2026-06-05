@@ -120,7 +120,7 @@ class _AgendaScreenState extends State<AgendaScreen>
               _isPsi ? 'psychologistId' : 'patientId',
               isEqualTo: user.uid,
             )
-            .where('status', whereIn: ['scheduled', 'cancelled'])
+            .where('status', whereIn: ['scheduled', 'cancelled', 'completed', 'no_show'])
             .snapshots(),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
@@ -144,7 +144,7 @@ class _AgendaScreenState extends State<AgendaScreen>
             final dt = DateTime.tryParse('${data['date'] ?? ''} ${data['startTime'] ?? ''}:00');
             final status = data['status'] as String? ?? 'scheduled';
             
-            if (status == 'cancelled') {
+            if (status == 'cancelled' || status == 'completed' || status == 'no_show') {
               past.add(doc);
             } else if (dt != null && dt.isBefore(now.subtract(const Duration(hours: 1)))) {
               past.add(doc);
@@ -360,6 +360,7 @@ class _PsychologistAppointmentCardState
 
   bool _editingLink = false;
   bool _savingLink  = false;
+  bool _completing  = false;
   late TextEditingController _linkCtrl;
 
   @override
@@ -373,6 +374,39 @@ class _PsychologistAppointmentCardState
   void dispose() {
     _linkCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _updateStatus(String newStatus, String message) async {
+    setState(() => _completing = true);
+    try {
+      await FirebaseFirestore.instance
+          .collection('appointments')
+          .doc(widget.appointmentId)
+          .update({'status': newStatus});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(children: [
+              const Icon(Icons.info_outline_rounded, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Text(message),
+            ]),
+            backgroundColor: newStatus == 'completed' ? _success : (newStatus == 'no_show' ? const Color(0xFFF59E0B) : _primary),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error al actualizar estado.'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _completing = false);
+    }
   }
 
   Future<void> _saveLink() async {
@@ -424,7 +458,9 @@ class _PsychologistAppointmentCardState
     final hasLink     = meetingUrl.isNotEmpty;
     final patientId   = d['patientId'] as String? ?? '';
     final status      = d['status'] as String? ?? 'scheduled';
-    final isCancelled = status == 'cancelled';
+    final isCancelled = status == 'cancelled' || status == 'canceled';
+    final isCompleted = status == 'completed';
+    final isNoShow    = status == 'no_show';
 
     return GestureDetector(
       onTap: () {
@@ -494,12 +530,12 @@ class _PsychologistAppointmentCardState
                 Text(
                   isCancelled 
                       ? 'Paciente canceló'
-                      : (widget.isPast ? 'Cita finalizada' : 'Paciente agendado'),
+                      : (isCompleted ? 'Cita completada' : (isNoShow ? 'Paciente no asistió' : (widget.isPast ? 'Cita finalizada' : 'Paciente agendado'))),
                   style: TextStyle(
                       fontSize: 13,
                       color: isCancelled 
                           ? Colors.red 
-                          : (widget.isPast ? _textSub : _success),
+                          : (isCompleted ? _success : (isNoShow ? const Color(0xFFF59E0B) : (widget.isPast ? _textSub : _success))),
                       fontWeight: FontWeight.w600),
                 ),
               ]),
@@ -513,16 +549,39 @@ class _PsychologistAppointmentCardState
                     : const Color(0xFFEEF2FF),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Text(
-                isCancelled 
-                    ? 'Cancelada'
-                    : (widget.isPast ? 'Pasada' : 'Próxima'),
-                style: TextStyle(
-                    fontSize: 11,
-                    color: isCancelled 
-                        ? Colors.red 
-                        : (widget.isPast ? _textSub : _primary),
-                    fontWeight: FontWeight.w700),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    isCancelled 
+                        ? 'Cancelada'
+                        : (isCompleted ? 'Completada' : (isNoShow ? 'No Asistió' : (widget.isPast ? 'Pasada' : 'Próxima'))),
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: isCancelled 
+                            ? Colors.red 
+                            : (isCompleted ? _success : (isNoShow ? const Color(0xFFF59E0B) : (widget.isPast ? _textSub : _primary))),
+                        fontWeight: FontWeight.w700),
+                  ),
+                  if (isCompleted || isNoShow) ...[
+                    const SizedBox(width: 4),
+                    PopupMenuButton<String>(
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(Icons.arrow_drop_down_rounded, size: 16, color: _textSub),
+                      tooltip: 'Editar estado',
+                      onSelected: (val) {
+                        if (val == 'scheduled') _updateStatus('scheduled', 'Estado revertido a Pendiente');
+                        else if (val == 'completed') _updateStatus('completed', 'Cita marcada como completada');
+                        else if (val == 'no_show') _updateStatus('no_show', 'Marcado como No Asistió');
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(value: 'scheduled', child: Text('Revertir a Pendiente', style: TextStyle(fontSize: 13))),
+                        if (!isCompleted) const PopupMenuItem(value: 'completed', child: Text('Marcar como Completada', style: TextStyle(fontSize: 13))),
+                        if (!isNoShow) const PopupMenuItem(value: 'no_show', child: Text('Marcar como No Asistió', style: TextStyle(fontSize: 13))),
+                      ],
+                    ),
+                  ],
+                ],
               ),
             ),
           ]),
@@ -724,6 +783,66 @@ class _PsychologistAppointmentCardState
                           size: 16, color: _textSub),
                     ]),
                   ),
+                ),
+              ],
+              if (!isCancelled && !isCompleted && !isNoShow) ...[
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: _completing ? null : () => _updateStatus('completed', 'Cita marcada como completada'),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+                          ),
+                          child: Center(
+                            child: _completing
+                                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF10B981)))
+                                : const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.check_circle_outline_rounded, color: Color(0xFF10B981), size: 18),
+                                      SizedBox(width: 6),
+                                      Text('Asistió', style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 13)),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: _completing ? null : () => _updateStatus('no_show', 'Marcado como No Asistió'),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF59E0B).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3)),
+                          ),
+                          child: Center(
+                            child: _completing
+                                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFF59E0B)))
+                                : const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.warning_amber_rounded, color: Color(0xFFF59E0B), size: 18),
+                                      SizedBox(width: 6),
+                                      Text('No Asistió', style: TextStyle(color: Color(0xFFF59E0B), fontWeight: FontWeight.bold, fontSize: 13)),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ]),

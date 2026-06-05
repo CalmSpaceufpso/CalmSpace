@@ -9,6 +9,7 @@ import '../services/micro_intervention_service.dart';
 import 'mood/mood_history_screen.dart';
 import 'profile/view_profile_screen.dart';
 import 'psychologists/psychologist_catalog_screen.dart';
+import 'psychologists/reports_dashboard_screen.dart';
 import 'appointments/agenda_screen.dart';
 import 'availability/manage_availability_screen.dart';
 
@@ -471,7 +472,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     // ── Tabs para cada rol ──────────────────────────────────────────────────
     final List<Widget> psiTabs = [
-      _PsychologistHomeTab(nombre: _nombre, uid: uid, firestoreReady: widget.firestoreReady),
+      _PsychologistHomeTab(
+        nombre: _nombre, 
+        uid: uid, 
+        firestoreReady: widget.firestoreReady,
+        onGoToAgenda: () => setState(() => _navIndex = 2),
+      ),
       ManageAvailabilityScreen(firestoreReady: widget.firestoreReady, psychologistId: uid),
       const AgendaScreen(),
       ViewProfileScreen(uid: uid, isOwnProfile: true),
@@ -1609,6 +1615,7 @@ class _PsychologistHomeTab extends StatelessWidget {
   final String nombre;
   final String uid;
   final bool firestoreReady;
+  final VoidCallback onGoToAgenda;
 
   static const Color _primary  = Color(0xFF2B5BFF);
   static const Color _bg       = Color(0xFFF4F6FB);
@@ -1619,6 +1626,7 @@ class _PsychologistHomeTab extends StatelessWidget {
     required this.nombre,
     required this.uid,
     required this.firestoreReady,
+    required this.onGoToAgenda,
   });
 
   @override
@@ -1687,12 +1695,15 @@ class _PsychologistHomeTab extends StatelessWidget {
               }).length ?? 0;
 
               return Row(children: [
-                Expanded(child: _StatCard(
-                  icon: Icons.calendar_month_rounded,
-                  label: 'Citas hoy',
-                  value: '$todayCount',
-                  color: const Color(0xFF2B5BFF),
-                  light: const Color(0xFFEEF2FF),
+                Expanded(child: GestureDetector(
+                  onTap: onGoToAgenda,
+                  child: _StatCard(
+                    icon: Icons.calendar_month_rounded,
+                    label: 'Citas hoy',
+                    value: '$todayCount',
+                    color: const Color(0xFF2B5BFF),
+                    light: const Color(0xFFEEF2FF),
+                  ),
                 )),
                 const SizedBox(width: 12),
                 Expanded(child: _StatCard(
@@ -1706,6 +1717,51 @@ class _PsychologistHomeTab extends StatelessWidget {
             },
           ),
 
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ReportsDashboardScreen(psychologistId: uid),
+              ),
+            ),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade200),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEEF2FF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.bar_chart_rounded, color: Color(0xFF2B5BFF), size: 22),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Reportes y Métricas', style: TextStyle(color: _textMain, fontWeight: FontWeight.bold, fontSize: 15)),
+                        SizedBox(height: 2),
+                        Text('Analiza tu rendimiento y citas', style: TextStyle(color: _textSub, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded, color: Color(0xFFCBD5E1)),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 24),
 
           // ── PRÓXIMAS CITAS DEL PSICÓLOGO ────────────────────────────────────
@@ -1744,8 +1800,16 @@ class _PsychologistHomeTab extends StatelessWidget {
                 );
               }
 
-              // Ordenar por fecha
-              final sorted = List.from(docs)..sort((a, b) {
+              // Filtrar pasadas y Ordenar por fecha
+              final now = DateTime.now();
+              final upcomingDocs = docs.where((doc) {
+                final d = doc.data() as Map<String, dynamic>;
+                final dt = DateTime.tryParse('${d['date']} ${d['startTime']}:00');
+                if (dt == null) return false;
+                return dt.isAfter(now.subtract(const Duration(hours: 1)));
+              }).toList();
+
+              final sorted = List.from(upcomingDocs)..sort((a, b) {
                 final ad = (a.data() as Map<String, dynamic>);
                 final bd = (b.data() as Map<String, dynamic>);
                 final aStr = '${ad['date']} ${ad['startTime']}:00';
@@ -1754,6 +1818,24 @@ class _PsychologistHomeTab extends StatelessWidget {
                 final bDt = DateTime.tryParse(bStr) ?? DateTime.now();
                 return aDt.compareTo(bDt);
               });
+
+              if (sorted.isEmpty) {
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: const Column(children: [
+                    Icon(Icons.event_available_rounded, color: Color(0xFFCBD5E1), size: 40),
+                    SizedBox(height: 10),
+                    Text('No tienes citas próximas',
+                      style: TextStyle(color: Color(0xFF8A94A6), fontSize: 13, fontWeight: FontWeight.w500)),
+                  ]),
+                );
+              }
 
               return Column(
                 children: sorted.take(5).map((doc) {
