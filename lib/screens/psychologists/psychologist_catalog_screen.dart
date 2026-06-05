@@ -9,6 +9,7 @@ import 'widgets/search_bar_widget.dart';
 import 'widgets/filter_chips_widget.dart';
 import 'widgets/loading_skeleton_widget.dart';
 import 'widgets/empty_state_widget.dart';
+import '../../utils/seed_data.dart';
 
 class PsychologistCatalogScreen extends StatefulWidget {
   const PsychologistCatalogScreen({super.key});
@@ -100,6 +101,11 @@ class _PsychologistCatalogScreenState
           ],
         ),
         actions: [
+          IconButton(
+            onPressed: () => SeedData.injectDummyPsychologists(context),
+            icon: const Icon(Icons.bug_report, color: Colors.redAccent),
+            tooltip: 'Inyectar Data (Dev)',
+          ),
           IconButton(
             onPressed: _load,
             icon: const Icon(Icons.refresh_rounded, color: _primary),

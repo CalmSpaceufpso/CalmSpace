@@ -5,7 +5,11 @@ class PsychologistService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<List<PsychologistModel>> getPsychologists() async {
-    final snapshot = await _firestore.collection('psychologists').get();
+    final snapshot = await _firestore
+        .collection('users')
+        .where('role', isEqualTo: 'Psicólogo')
+        .where('status', isEqualTo: 'activo')
+        .get();
 
     return snapshot.docs.map((doc) {
       return PsychologistModel.fromFirestore(doc.data(), doc.id);

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -119,12 +120,19 @@ class _OwnProfileView extends StatelessWidget {
                     child: CircleAvatar(
                       radius: 52,
                       backgroundColor: const Color(0xFF1D4ED8),
-                      child: Text(
-                        inicial,
-                        style: const TextStyle(
-                          fontSize: 42, color: Colors.white, fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      backgroundImage: profile.photoUrl != null && profile.photoUrl!.isNotEmpty
+                          ? (profile.photoUrl!.startsWith('http')
+                              ? NetworkImage(profile.photoUrl!)
+                              : MemoryImage(base64Decode(profile.photoUrl!.split(',').last)) as ImageProvider)
+                          : null,
+                      child: (profile.photoUrl == null || profile.photoUrl!.isEmpty)
+                          ? Text(
+                              inicial,
+                              style: const TextStyle(
+                                fontSize: 42, color: Colors.white, fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          : null,
                     ),
                   ),
 
@@ -395,8 +403,14 @@ class _PublicPsychologistViewState extends State<_PublicPsychologistView> {
               child: CircleAvatar(
                 radius: 70,
                 backgroundColor: _primary,
-                child: Text(inicial,
-                    style: const TextStyle(fontSize: 56, color: Colors.white, fontWeight: FontWeight.bold)),
+                backgroundImage: profile.photoUrl != null && profile.photoUrl!.isNotEmpty
+                    ? (profile.photoUrl!.startsWith('http')
+                        ? NetworkImage(profile.photoUrl!)
+                        : MemoryImage(base64Decode(profile.photoUrl!.split(',').last)) as ImageProvider)
+                    : null,
+                child: (profile.photoUrl == null || profile.photoUrl!.isEmpty)
+                    ? Text(inicial, style: const TextStyle(fontSize: 56, color: Colors.white, fontWeight: FontWeight.bold))
+                    : null,
               ),
             ),
             const SizedBox(height: 16),
@@ -436,26 +450,78 @@ class _PublicPsychologistViewState extends State<_PublicPsychologistView> {
               const SizedBox(height: 28),
             ],
 
-            // ── PRÓXIMOS HORARIOS ──────────────────────────────
-            const Text('Disponibilidad',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textMain)),
+            // ── DISPONIBILIDAD HORARIA — desde Firestore ──────────────────
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              const Text('Disponibilidad',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textMain)),
+              if (_loadingSlots)
+                const SizedBox(width: 18, height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: _primary)),
+            ]),
             const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.grey.shade200)),
-              child: Column(children: const [
-                Icon(Icons.calendar_today_outlined,
-                    color: Color(0xFFCBD5E1), size: 40),
-                SizedBox(height: 12),
-                Text('Este psicólogo aún no ha\nconfigurado su disponibilidad',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Color(0xFF8A94A6), fontSize: 13)),
-              ]),
-            ),
+
+            if (_loadingSlots)
+              const SizedBox()
+            else if (_slots.isEmpty)
+              // Estado vacío
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.grey.shade200)),
+                child: Column(children: const [
+                  Icon(Icons.calendar_today_outlined,
+                      color: Color(0xFFCBD5E1), size: 40),
+                  SizedBox(height: 12),
+                  Text('Este psicólogo aún no ha\nconfigurado su disponibilidad',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Color(0xFF8A94A6), fontSize: 13)),
+                ]),
+              )
+            else
+              // Tarjetas de disponibilidad por día
+              ...byDay.entries.map((entry) => Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8, offset: const Offset(0, 2))]),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  // Etiqueta del día
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(20)),
+                    child: Text(entry.key,
+                        style: const TextStyle(
+                            color: _primary, fontSize: 12, fontWeight: FontWeight.w700)),
+                  ),
+                  const SizedBox(height: 10),
+                  // Chips de horario
+                  Wrap(spacing: 8, runSpacing: 8,
+                    children: entry.value.map((slot) => Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0F4FF),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: _primary.withValues(alpha: 0.2))),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.access_time, size: 14, color: _primary),
+                        const SizedBox(width: 5),
+                        Text(slot.label,
+                            style: const TextStyle(
+                                fontSize: 13, color: _textMain, fontWeight: FontWeight.w500)),
+                      ]),
+                    )).toList()),
+                ]),
+              )),
+
             const SizedBox(height: 100),
           ],
         ),
