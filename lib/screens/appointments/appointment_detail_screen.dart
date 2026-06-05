@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/psychologist_model.dart';
 import '../../repositories/appointment_repository.dart';
+import '../../repositories/chat_repository.dart';
+import '../chat/chat_screen.dart';
 import 'schedule_appointment_screen.dart';
 
 class AppointmentDetailScreen extends StatefulWidget {
@@ -247,6 +250,15 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    // ── Chat button ───────────────────────────────────────
+                    _ChatButton(
+                      appointmentId: widget.appointmentId,
+                      psychologistId: widget.appointmentData['psychologistId'] as String? ?? '',
+                      psychologistName: widget.appointmentData['psychologistName'] as String? ?? 'Psicólogo',
+                      appointmentDate: widget.appointmentData['date'] as String? ?? '',
+                      appointmentTime: widget.appointmentData['startTime'] as String? ?? '',
+                    ),
                     const SizedBox(height: 20),
                     Row(
                       children: [
@@ -405,5 +417,101 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     } finally {
       if (mounted) setState(() => _isProcessing = false);
     }
+  }
+}
+
+// ── Chat button (patient side) ────────────────────────────────────────────────
+
+class _ChatButton extends StatefulWidget {
+  final String appointmentId;
+  final String psychologistId;
+  final String psychologistName;
+  final String appointmentDate;
+  final String appointmentTime;
+
+  const _ChatButton({
+    required this.appointmentId,
+    required this.psychologistId,
+    required this.psychologistName,
+    required this.appointmentDate,
+    required this.appointmentTime,
+  });
+
+  @override
+  State<_ChatButton> createState() => _ChatButtonState();
+}
+
+class _ChatButtonState extends State<_ChatButton> {
+  static const Color _primary  = Color(0xFF2B5BFF);
+  static const Color _textMain = Color(0xFF0D1B3E);
+
+  bool _checking = false;
+
+  Future<void> _openChat() async {
+    setState(() => _checking = true);
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // Load current user's display name from Firestore
+      String userName = user.displayName ?? 'Paciente';
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        if (doc.exists) {
+          final data = doc.data()!;
+          userName = data['name'] as String? ??
+              data['fullName'] as String? ??
+              userName;
+        }
+      } catch (_) {}
+
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatScreen(
+            appointmentId: widget.appointmentId,
+            otherPersonName: widget.psychologistName,
+            currentUserName: userName,
+            appointmentDate: widget.appointmentDate,
+            appointmentTime: widget.appointmentTime,
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 54,
+      child: OutlinedButton.icon(
+        onPressed: _checking ? null : _openChat,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _primary,
+          side: const BorderSide(color: Color(0xFF2B5BFF), width: 1.5),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
+        ),
+        icon: _checking
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Color(0xFF2B5BFF)))
+            : const Icon(Icons.chat_bubble_outline_rounded, size: 20),
+        label: Text(
+          _checking ? 'Abriendo...' : 'Chatear con ${widget.psychologistName.split(' ').first}',
+          style: const TextStyle(
+              fontSize: 15, fontWeight: FontWeight.bold, color: _textMain),
+        ),
+      ),
+    );
   }
 }
