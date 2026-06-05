@@ -81,12 +81,12 @@ class CalmSpaceApp extends StatelessWidget {
             final uid = snapshot.data!.uid;
 
             return FutureBuilder<DocumentSnapshot>(
-              // La key evita que se re-ejecute la consulta en cada rebuild
+              // Siempre leer del servidor para obtener el rol actualizado (HU-20)
               key: ValueKey('user_doc_$uid'),
               future: FirebaseFirestore.instance
                   .collection('users')
                   .doc(uid)
-                  .get(),
+                  .get(const GetOptions(source: Source.server)),
               builder: (context, userSnap) {
                 if (userSnap.connectionState == ConnectionState.waiting) {
                   return const Scaffold(

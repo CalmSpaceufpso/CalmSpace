@@ -76,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     setState(() { _nombre = user.displayName ?? ''; _email = user.email ?? ''; });
     try {
       final doc = await FirebaseFirestore.instance
-          .collection('users').doc(user.uid).get();
+          .collection('users').doc(user.uid).get(const GetOptions(source: Source.server));
       if (mounted) {
         final d = doc.exists ? doc.data()! : <String, dynamic>{};
         setState(() {
