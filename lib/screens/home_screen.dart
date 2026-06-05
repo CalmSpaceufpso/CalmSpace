@@ -12,6 +12,7 @@ import 'psychologists/psychologist_catalog_screen.dart';
 import 'psychologists/reports_dashboard_screen.dart';
 import 'appointments/agenda_screen.dart';
 import 'availability/manage_availability_screen.dart';
+import 'chat/chat_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool firestoreReady;
@@ -480,6 +481,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
       ManageAvailabilityScreen(firestoreReady: widget.firestoreReady, psychologistId: uid),
       const AgendaScreen(),
+      const ChatListScreen(),
       ViewProfileScreen(uid: uid, isOwnProfile: true),
     ];
     final List<Widget> pacienteTabs = [
@@ -502,6 +504,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
       const PsychologistCatalogScreen(),
       const AgendaScreen(),
+      const ChatListScreen(),
       ViewProfileScreen(uid: uid, isOwnProfile: true),
     ];
 
@@ -528,11 +531,13 @@ class _BottomNav extends StatelessWidget {
 
   static const _patientItems = [
     (Icons.home_rounded,'Home'), (Icons.search_rounded,'Buscar'),
-    (Icons.calendar_today_rounded,'Agenda'), (Icons.person_outline_rounded,'Perfil'),
+    (Icons.calendar_today_rounded,'Agenda'), (Icons.chat_bubble_outline_rounded,'Mensajes'),
+    (Icons.person_outline_rounded,'Perfil'),
   ];
   static const _psiItems = [
     (Icons.home_rounded,'Home'), (Icons.schedule_rounded,'Horarios'),
-    (Icons.calendar_today_rounded,'Citas'), (Icons.person_outline_rounded,'Perfil'),
+    (Icons.calendar_today_rounded,'Citas'), (Icons.chat_bubble_outline_rounded,'Mensajes'),
+    (Icons.person_outline_rounded,'Perfil'),
   ];
 
   const _BottomNav({required this.current, required this.onTap, this.isPsychologist = false});
@@ -1947,12 +1952,22 @@ class _PsychologistHomeTab extends StatelessWidget {
             )),
             const SizedBox(width: 12),
             Expanded(child: _QuickAction(
-              icon: Icons.person_outline_rounded,
-              label: 'Mi\nPerfil',
+              icon: Icons.chat_bubble_outline_rounded,
+              label: 'Mis\nMensajes',
               color: const Color(0xFF0891B2),
               onTap: () {
                 final homeState = context.findAncestorStateOfType<_HomeScreenState>();
                 homeState?.setState(() => homeState._navIndex = 3);
+              },
+            )),
+            const SizedBox(width: 12),
+            Expanded(child: _QuickAction(
+              icon: Icons.person_outline_rounded,
+              label: 'Mi\nPerfil',
+              color: const Color(0xFF6366F1),
+              onTap: () {
+                final homeState = context.findAncestorStateOfType<_HomeScreenState>();
+                homeState?.setState(() => homeState._navIndex = 4);
               },
             )),
           ]),
