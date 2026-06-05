@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:calm_space/screens/profile/patient_detail_screen.dart';
+import '../chat/chat_screen.dart';
 import 'appointment_detail_screen.dart';
 
 class AgendaScreen extends StatefulWidget {
@@ -545,6 +546,18 @@ class _PsychologistAppointmentCardState
         if (!widget.isPast && !isCancelled) ...[
           const Divider(height: 1, color: Color(0xFFF1F5F9)),
 
+          // ── Botón de Chat (psicólogo → paciente) ────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: _PsychChatButton(
+              appointmentId: widget.appointmentId,
+              patientId: patientId,
+              patientName: patientName,
+              appointmentDate: date,
+              appointmentTime: startTime,
+            ),
+          ),
+
           // ── Sección del link ─────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.all(16),
@@ -810,6 +823,97 @@ class _JoinButton extends StatelessWidget {
                 color: Colors.white,
                 fontSize: 14,
                 fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+}
+
+// ── Chat button (psychologist side) ──────────────────────────────────────────
+
+class _PsychChatButton extends StatefulWidget {
+  final String appointmentId;
+  final String patientId;
+  final String patientName;
+  final String appointmentDate;
+  final String appointmentTime;
+
+  const _PsychChatButton({
+    required this.appointmentId,
+    required this.patientId,
+    required this.patientName,
+    required this.appointmentDate,
+    required this.appointmentTime,
+  });
+
+  @override
+  State<_PsychChatButton> createState() => _PsychChatButtonState();
+}
+
+class _PsychChatButtonState extends State<_PsychChatButton> {
+  static const Color _primary = Color(0xFF2B5BFF);
+  bool _loading = false;
+
+  Future<void> _open() async {
+    setState(() => _loading = true);
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      String myName = user.displayName ?? 'Psicólogo';
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        if (doc.exists) {
+          final data = doc.data()!;
+          myName = data['name'] as String? ??
+              data['fullName'] as String? ??
+              myName;
+        }
+      } catch (_) {}
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatScreen(
+            appointmentId: widget.appointmentId,
+            otherPersonName: widget.patientName,
+            currentUserName: myName,
+            appointmentDate: widget.appointmentDate,
+            appointmentTime: widget.appointmentTime,
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 44,
+      child: OutlinedButton.icon(
+        onPressed: _loading ? null : _open,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _primary,
+          side: const BorderSide(color: Color(0xFF2B5BFF), width: 1.5),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        icon: _loading
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Color(0xFF2B5BFF)))
+            : const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+        label: Text(
+          _loading ? 'Abriendo...' : 'Chat con ${widget.patientName.split(" ").first}',
+          style: const TextStyle(
+              fontSize: 13, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }
