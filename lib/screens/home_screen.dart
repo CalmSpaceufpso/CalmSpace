@@ -13,6 +13,9 @@ import 'psychologists/reports_dashboard_screen.dart';
 import 'appointments/agenda_screen.dart';
 import 'availability/manage_availability_screen.dart';
 import 'chat/chat_list_screen.dart';
+import 'admin/user_list_screen.dart';
+import '../providers/user_list_provider.dart';
+import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool firestoreReady;
@@ -468,22 +471,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           body: Center(child: CircularProgressIndicator(color: _primary)));
     }
 
-    final isPsi = _role == 'Psicólogo';
-    final uid   = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final isPsi   = _role == 'Psicólogo';
+    final isAdmin = _role == 'Admin';
+    final uid     = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     // ── Tabs para cada rol ──────────────────────────────────────────────────
     final List<Widget> psiTabs = [
       _PsychologistHomeTab(
-        nombre: _nombre, 
-        uid: uid, 
+        nombre: _nombre,
+        uid: uid,
         firestoreReady: widget.firestoreReady,
         onGoToAgenda: () => setState(() => _navIndex = 2),
+        onGoToTab: (i) => setState(() => _navIndex = i),
       ),
       ManageAvailabilityScreen(firestoreReady: widget.firestoreReady, psychologistId: uid),
       const AgendaScreen(),
       const ChatListScreen(),
       ViewProfileScreen(uid: uid, isOwnProfile: true),
     ];
+
     final List<Widget> pacienteTabs = [
       _HomeTab(
         nombre: _nombre, role: _role,
@@ -508,7 +514,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ViewProfileScreen(uid: uid, isOwnProfile: true),
     ];
 
-    final tabs = isPsi ? psiTabs : pacienteTabs;
+    // ── Admin tabs (HU-16) ─────────────────────────────────────────────────
+    final List<Widget> adminTabs = [
+      _AdminHomeTab(
+        nombre: _nombre,
+        onGoToUsers: () => setState(() => _navIndex = 1),
+      ),
+      ChangeNotifierProvider(
+        create: (_) => UserListProvider(),
+        child: const UserListScreen(),
+      ),
+      ViewProfileScreen(uid: uid, isOwnProfile: true),
+    ];
+
+    final tabs = isAdmin ? adminTabs : (isPsi ? psiTabs : pacienteTabs);
 
     return Scaffold(
       backgroundColor: _bg,
@@ -516,6 +535,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         current: _navIndex,
         onTap: (i) => setState(() => _navIndex = i),
         isPsychologist: isPsi,
+        isAdmin: isAdmin,
       ),
       body: IndexedStack(index: _navIndex, children: tabs),
     );
@@ -527,57 +547,102 @@ class _BottomNav extends StatelessWidget {
   final int current;
   final ValueChanged<int> onTap;
   final bool isPsychologist;
+  final bool isAdmin;
   static const Color _p = Color(0xFF2B5BFF);
 
   static const _patientItems = [
-    (Icons.home_rounded,'Home'), (Icons.search_rounded,'Buscar'),
-    (Icons.calendar_today_rounded,'Agenda'), (Icons.chat_bubble_outline_rounded,'Mensajes'),
-    (Icons.person_outline_rounded,'Perfil'),
+    (Icons.home_rounded, 'Home'),
+    (Icons.search_rounded, 'Buscar'),
+    (Icons.calendar_today_rounded, 'Agenda'),
+    (Icons.chat_bubble_outline_rounded, 'Mensajes'),
+    (Icons.person_outline_rounded, 'Perfil'),
   ];
   static const _psiItems = [
-    (Icons.home_rounded,'Home'), (Icons.schedule_rounded,'Horarios'),
-    (Icons.calendar_today_rounded,'Citas'), (Icons.chat_bubble_outline_rounded,'Mensajes'),
-    (Icons.person_outline_rounded,'Perfil'),
+    (Icons.home_rounded, 'Home'),
+    (Icons.schedule_rounded, 'Horarios'),
+    (Icons.calendar_today_rounded, 'Citas'),
+    (Icons.chat_bubble_outline_rounded, 'Mensajes'),
+    (Icons.person_outline_rounded, 'Perfil'),
+  ];
+  // HU-16: Admin-only nav items
+  static const _adminItems = [
+    (Icons.dashboard_rounded, 'Panel'),
+    (Icons.people_alt_rounded, 'Usuarios'),
+    (Icons.person_outline_rounded, 'Perfil'),
   ];
 
-  const _BottomNav({required this.current, required this.onTap, this.isPsychologist = false});
+  const _BottomNav({
+    required this.current,
+    required this.onTap,
+    this.isPsychologist = false,
+    this.isAdmin = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final items = isPsychologist ? _psiItems : _patientItems;
+    final items = isAdmin
+        ? _adminItems
+        : (isPsychologist ? _psiItems : _patientItems);
     return Container(
-    decoration: BoxDecoration(
-      color: _p,
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      boxShadow: [BoxShadow(color: _p.withOpacity(0.4), blurRadius: 20, offset: const Offset(0,-4))]),
-    child: SafeArea(top: false,
-      child: Padding(padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: List.generate(items.length, (i) {
-            final a = current == i;
-            return GestureDetector(onTap: () => onTap(i),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: a ? Colors.white.withOpacity(0.15) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(16)),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(items[i].$1, color: a ? Colors.white : Colors.white54, size: 24),
-                  const SizedBox(height: 4),
-                  Text(items[i].$2, style: TextStyle(fontSize: 11,
-                    color: a ? Colors.white : Colors.white54,
-                    fontWeight: a ? FontWeight.w700 : FontWeight.normal)),
-                  if (a) ...[const SizedBox(height:4), Container(width:4,height:4,
-                    decoration: const BoxDecoration(color:Colors.white,shape:BoxShape.circle))],
-                ]),
-              ),
-            );
-          }),
+      decoration: BoxDecoration(
+        color: _p,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+              color: _p.withOpacity(0.4),
+              blurRadius: 20,
+              offset: const Offset(0, -4))
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(items.length, (i) {
+              final a = current == i;
+              return GestureDetector(
+                onTap: () => onTap(i),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: a
+                        ? Colors.white.withOpacity(0.15)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(items[i].$1,
+                          color: a ? Colors.white : Colors.white54,
+                          size: 24),
+                      const SizedBox(height: 4),
+                      Text(items[i].$2,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: a ? Colors.white : Colors.white54,
+                            fontWeight: a
+                                ? FontWeight.w700
+                                : FontWeight.normal,
+                          )),
+                      if (a) ...[const SizedBox(height: 4),
+                        Container(width: 4, height: 4,
+                          decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle))],
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ),
         ),
       ),
-    ),
-  );
+    );
   }
 }
 
@@ -1621,6 +1686,7 @@ class _PsychologistHomeTab extends StatelessWidget {
   final String uid;
   final bool firestoreReady;
   final VoidCallback onGoToAgenda;
+  final ValueChanged<int> onGoToTab;
 
   static const Color _primary  = Color(0xFF2B5BFF);
   static const Color _bg       = Color(0xFFF4F6FB);
@@ -1632,6 +1698,7 @@ class _PsychologistHomeTab extends StatelessWidget {
     required this.uid,
     required this.firestoreReady,
     required this.onGoToAgenda,
+    required this.onGoToTab,
   });
 
   @override
@@ -1934,41 +2001,28 @@ class _PsychologistHomeTab extends StatelessWidget {
               icon: Icons.schedule_rounded,
               label: 'Gestionar\nHorarios',
               color: const Color(0xFF2B5BFF),
-              onTap: () {
-                // Navigate to tab 1 (Horarios)
-                final homeState = context.findAncestorStateOfType<_HomeScreenState>();
-                homeState?.setState(() => homeState._navIndex = 1);
-              },
+              onTap: () => onGoToTab(1),
             )),
             const SizedBox(width: 12),
             Expanded(child: _QuickAction(
               icon: Icons.calendar_today_rounded,
               label: 'Ver todas\nlas citas',
               color: const Color(0xFF7C3AED),
-              onTap: () {
-                final homeState = context.findAncestorStateOfType<_HomeScreenState>();
-                homeState?.setState(() => homeState._navIndex = 2);
-              },
+              onTap: () => onGoToTab(2),
             )),
             const SizedBox(width: 12),
             Expanded(child: _QuickAction(
               icon: Icons.chat_bubble_outline_rounded,
               label: 'Mis\nMensajes',
               color: const Color(0xFF0891B2),
-              onTap: () {
-                final homeState = context.findAncestorStateOfType<_HomeScreenState>();
-                homeState?.setState(() => homeState._navIndex = 3);
-              },
+              onTap: () => onGoToTab(3),
             )),
             const SizedBox(width: 12),
             Expanded(child: _QuickAction(
               icon: Icons.person_outline_rounded,
               label: 'Mi\nPerfil',
               color: const Color(0xFF6366F1),
-              onTap: () {
-                final homeState = context.findAncestorStateOfType<_HomeScreenState>();
-                homeState?.setState(() => homeState._navIndex = 4);
-              },
+              onTap: () => onGoToTab(4),
             )),
           ]),
 
@@ -2043,4 +2097,243 @@ class _QuickAction extends StatelessWidget {
       ),
     );
   }
-}
+}
+
+// ── ADMIN HOME TAB (HU-16) ────────────────────────────────────────────────────
+
+class _AdminHomeTab extends StatelessWidget {
+  final String nombre;
+  final VoidCallback onGoToUsers;
+  const _AdminHomeTab({required this.nombre, required this.onGoToUsers});
+
+  static const Color _primary  = Color(0xFF2B5BFF);
+  static const Color _textMain = Color(0xFF0D1B3E);
+  static const Color _textSub  = Color(0xFF8A94A6);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F6FB),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Header ────────────────────────────────────────────────────
+              Row(children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Hola, ${nombre.split(' ').first} 👋',
+                          style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w900,
+                              color: _textMain)),
+                      const SizedBox(height: 4),
+                      const Text('Panel de administración',
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: _textSub,
+                              fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF2B5BFF), Color(0xFF5E81FF)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.admin_panel_settings_rounded,
+                      color: Colors.white, size: 24),
+                ),
+              ]),
+
+              const SizedBox(height: 28),
+
+              // ── Live stats ────────────────────────────────────────────────
+              const Text('Resumen',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: _textMain)),
+              const SizedBox(height: 12),
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .snapshots(),
+                builder: (context, snap) {
+                  final docs = snap.data?.docs ?? [];
+                  final total    = docs.length;
+                  final patients = docs.where((d) =>
+                      (d.data() as Map)['role'] == 'Paciente').length;
+                  final psychs   = docs.where((d) =>
+                      (d.data() as Map)['role'] == 'Psicólogo').length;
+                  final pending  = docs.where((d) =>
+                      (d.data() as Map)['status'] == 'pendiente').length;
+
+                  return Column(children: [
+                    Row(children: [
+                      Expanded(child: _AdminStatCard(
+                        icon: Icons.people_alt_rounded,
+                        label: 'Total usuarios',
+                        value: total.toString(),
+                        color: _primary,
+                        bg: const Color(0xFFEEF2FF),
+                      )),
+                      const SizedBox(width: 12),
+                      Expanded(child: _AdminStatCard(
+                        icon: Icons.person_rounded,
+                        label: 'Pacientes',
+                        value: patients.toString(),
+                        color: const Color(0xFF0891B2),
+                        bg: const Color(0xFFE0F2FE),
+                      )),
+                    ]),
+                    const SizedBox(height: 12),
+                    Row(children: [
+                      Expanded(child: _AdminStatCard(
+                        icon: Icons.psychology_rounded,
+                        label: 'Psicólogos',
+                        value: psychs.toString(),
+                        color: const Color(0xFF7C3AED),
+                        bg: const Color(0xFFF5F3FF),
+                      )),
+                      const SizedBox(width: 12),
+                      Expanded(child: _AdminStatCard(
+                        icon: Icons.pending_actions_rounded,
+                        label: 'Pendientes',
+                        value: pending.toString(),
+                        color: const Color(0xFFF59E0B),
+                        bg: const Color(0xFFFFFBEB),
+                      )),
+                    ]),
+                  ]);
+                },
+              ),
+
+              const SizedBox(height: 28),
+
+              // ── Quick access ──────────────────────────────────────────────
+              const Text('Acceso rápido',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: _textMain)),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: onGoToUsers,
+                child: Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF2B5BFF), Color(0xFF5E81FF)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                          color: const Color(0xFF2B5BFF).withOpacity(0.35),
+                          blurRadius: 14,
+                          offset: const Offset(0, 6)),
+                    ],
+                  ),
+                  child: Row(children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(Icons.people_alt_rounded,
+                          color: Colors.white, size: 26),
+                    ),
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Gestión de usuarios',
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
+                          SizedBox(height: 3),
+                          Text('Ver lista completa de registrados',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white70)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded,
+                        color: Colors.white70, size: 16),
+                  ]),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AdminStatCard extends StatelessWidget {
+  final IconData icon;
+  final String label, value;
+  final Color color, bg;
+  const _AdminStatCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.bg,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3)),
+        ],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Container(
+          padding: const EdgeInsets.all(9),
+          decoration:
+              BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(height: 10),
+        Text(value,
+            style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                color: color)),
+        const SizedBox(height: 2),
+        Text(label,
+            style: const TextStyle(
+                fontSize: 11,
+                color: Color(0xFF8A94A6),
+                fontWeight: FontWeight.w600)),
+      ]),
+    );
+  }
+}
+
