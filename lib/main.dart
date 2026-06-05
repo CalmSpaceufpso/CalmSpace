@@ -13,6 +13,7 @@ import 'screens/home_screen.dart';
 import 'screens/profile/view_profile_screen.dart';
 import 'screens/availability/manage_availability_screen.dart';
 import 'screens/psychologists/psychologist_catalog_screen.dart';
+import 'screens/admin/psychologist_approval_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -103,12 +104,17 @@ class CalmSpaceApp extends StatelessWidget {
 
                 if (userSnap.hasData && userSnap.data!.exists) {
                   final data   = userSnap.data!.data() as Map<String, dynamic>;
-                  final role   = data['role']   ?? 'Paciente';
+                  final role   = (data['role'] ?? 'Paciente').toString().trim();
                   final status = data['status'] ?? 'activo';
 
-                  if (role == 'Psicólogo' &&
-                      (status == 'pendiente' || status == 'rechazado')) {
-                    return _PendingScreen();
+                  final r = role.toLowerCase();
+                  final isPsi = r == 'psicólogo' || r == 'psicologo';
+
+                  if (isPsi && status == 'pendiente') {
+                    return _PendingScreen(rejected: false);
+                  }
+                  if (isPsi && status == 'rechazado') {
+                    return _PendingScreen(rejected: true);
                   }
                 }
 
@@ -122,8 +128,10 @@ class CalmSpaceApp extends StatelessWidget {
   }
 }
 
-// ── PENDING SCREEN ─────────────────────────────────────────────────────────
 class _PendingScreen extends StatelessWidget {
+  final bool rejected;
+  const _PendingScreen({super.key, this.rejected = false});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -134,24 +142,44 @@ class _PendingScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.hourglass_top_rounded,
-                  size: 64, color: Color(0xFF1D35B4)),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: rejected
+                      ? const Color(0xFFFEF2F2)
+                      : const Color(0xFFEEF2FF),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  rejected
+                      ? Icons.cancel_rounded
+                      : Icons.hourglass_top_rounded,
+                  size: 56,
+                  color: rejected
+                      ? const Color(0xFFEF4444)
+                      : const Color(0xFF1D35B4),
+                ),
+              ),
               const SizedBox(height: 20),
-              const Text('Cuenta en revisión',
-                  style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E293B))),
+              Text(
+                rejected ? 'Solicitud rechazada' : 'Cuenta en revisión',
+                style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E293B))),
               const SizedBox(height: 10),
-              const Text(
-                'Tu cuenta de psicólogo está siendo verificada.\nTe notificaremos cuando sea aprobada.',
+              Text(
+                rejected
+                    ? 'Tu solicitud como psicólogo no fue aprobada.\nContacta al administrador para más información.'
+                    : 'Tu cuenta de psicólogo está siendo verificada.\nTe notificaremos cuando sea aprobada.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+                style: const TextStyle(fontSize: 14, color: Color(0xFF64748B)),
               ),
               const SizedBox(height: 32),
-              OutlinedButton(
+              OutlinedButton.icon(
+                icon: const Icon(Icons.logout_rounded),
                 onPressed: () => FirebaseAuth.instance.signOut(),
-                child: const Text('Cerrar sesión'),
+                label: const Text('Cerrar sesión'),
               ),
             ],
           ),

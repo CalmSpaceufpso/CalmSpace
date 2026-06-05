@@ -13,6 +13,7 @@ import 'psychologists/reports_dashboard_screen.dart';
 import 'appointments/agenda_screen.dart';
 import 'availability/manage_availability_screen.dart';
 import 'chat/chat_list_screen.dart';
+import 'admin/psychologist_approval_screen.dart';
 import 'admin/user_list_screen.dart';
 import '../providers/user_list_provider.dart';
 import 'package:provider/provider.dart';
@@ -79,7 +80,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       if (mounted) {
         final d = doc.exists ? doc.data()! : <String, dynamic>{};
         setState(() {
-          _role   = d['role']     ?? 'Paciente';
+          final rawRole = (d['role'] ?? 'Paciente').toString().trim();
+          final r = rawRole.toLowerCase();
+          if (r == 'psicólogo' || r == 'psicologo') {
+            _role = 'Psicólogo';
+          } else if (r == 'admin') {
+            _role = 'Admin';
+          } else {
+            _role = 'Paciente';
+          }
           // Firestore puede usar 'fullName' (HU-04) o 'name' (registro antiguo)
           _nombre = d['fullName'] ?? d['name'] ?? user.displayName ?? _email;
           _email  = d['email']   ?? _email;
@@ -514,16 +523,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ViewProfileScreen(uid: uid, isOwnProfile: true),
     ];
 
-    // ── Admin tabs (HU-16) ─────────────────────────────────────────────────
+    // ── Admin tabs (HU-16 / HU-20) ──────────────────────────────────────────
     final List<Widget> adminTabs = [
       _AdminHomeTab(
         nombre: _nombre,
         onGoToUsers: () => setState(() => _navIndex = 1),
+        onGoToPsychologists: () => setState(() => _navIndex = 2),
       ),
       ChangeNotifierProvider(
         create: (_) => UserListProvider(),
         child: const UserListScreen(),
       ),
+      const PsychologistApprovalScreen(),
       ViewProfileScreen(uid: uid, isOwnProfile: true),
     ];
 
@@ -564,11 +575,12 @@ class _BottomNav extends StatelessWidget {
     (Icons.chat_bubble_outline_rounded, 'Mensajes'),
     (Icons.person_outline_rounded, 'Perfil'),
   ];
-  // HU-16: Admin-only nav items
+  // HU-16 / HU-20: Admin-only nav items
   static const _adminItems = [
-    (Icons.dashboard_rounded, 'Panel'),
-    (Icons.people_alt_rounded, 'Usuarios'),
-    (Icons.person_outline_rounded, 'Perfil'),
+    (Icons.dashboard_rounded,         'Panel'),
+    (Icons.people_alt_rounded,        'Usuarios'),
+    (Icons.psychology_rounded,        'Psicólogos'),
+    (Icons.person_outline_rounded,    'Perfil'),
   ];
 
   const _BottomNav({
@@ -2104,7 +2116,12 @@ class _QuickAction extends StatelessWidget {
 class _AdminHomeTab extends StatelessWidget {
   final String nombre;
   final VoidCallback onGoToUsers;
-  const _AdminHomeTab({required this.nombre, required this.onGoToUsers});
+  final VoidCallback onGoToPsychologists;
+  const _AdminHomeTab({
+    required this.nombre,
+    required this.onGoToUsers,
+    required this.onGoToPsychologists,
+  });
 
   static const Color _primary  = Color(0xFF2B5BFF);
   static const Color _textMain = Color(0xFF0D1B3E);
@@ -2278,6 +2295,89 @@ class _AdminHomeTab extends StatelessWidget {
                         color: Colors.white70, size: 16),
                   ]),
                 ),
+              ),
+              const SizedBox(height: 12),
+              // ── HU-20: Aprobación de psicólogos ────────────────────────────
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .where('role', isEqualTo: 'Psicólogo')
+                    .where('status', isEqualTo: 'pendiente')
+                    .snapshots(),
+                builder: (context, snap) {
+                  final pendingCount = snap.data?.docs.length ?? 0;
+                  return GestureDetector(
+                    onTap: onGoToPsychologists,
+                    child: Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF7C3AED), Color(0xFFA855F7)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                              color: const Color(0xFF7C3AED).withOpacity(0.35),
+                              blurRadius: 14,
+                              offset: const Offset(0, 6)),
+                        ],
+                      ),
+                      child: Row(children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(Icons.psychology_rounded,
+                              color: Colors.white, size: 26),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Aprobar psicólogos',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white)),
+                              const SizedBox(height: 3),
+                              Text(
+                                pendingCount > 0
+                                    ? '$pendingCount solicitud${pendingCount != 1 ? 'es' : ''} pendiente${pendingCount != 1 ? 's' : ''}'
+                                    : 'Sin solicitudes nuevas',
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.white70)),
+                            ],
+                          ),
+                        ),
+                        if (pendingCount > 0) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '$pendingCount',
+                              style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF7C3AED)),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        const Icon(Icons.arrow_forward_ios_rounded,
+                            color: Colors.white70, size: 16),
+                      ]),
+                    ),
+                  );
+                },
               ),
             ],
           ),
