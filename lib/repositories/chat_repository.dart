@@ -46,7 +46,6 @@ class ChatRepository {
           isEqualTo: userId,
         )
         .where('status', isEqualTo: 'scheduled')
-        .orderBy('createdAt', descending: true)
         .snapshots();
   }
 

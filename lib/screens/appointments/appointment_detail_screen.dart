@@ -453,6 +453,48 @@ class _ChatButtonState extends State<_ChatButton> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
+      // ── T3: Verify an active appointment exists before allowing chat ──────
+      final repo = ChatRepository();
+      final hasAppointment = await repo.hasActiveAppointment(
+        patientId: user.uid,
+        psychologistId: widget.psychologistId,
+      );
+
+      if (!mounted) return;
+
+      if (!hasAppointment) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20)),
+            title: const Row(children: [
+              Icon(Icons.lock_outline_rounded,
+                  color: Color(0xFF2B5BFF), size: 22),
+              SizedBox(width: 10),
+              Text('Acceso restringido',
+                  style: TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.bold)),
+            ]),
+            content: const Text(
+              'Solo puedes chatear con un psicólogo si tienes una cita agendada y confirmada con él.',
+              style: TextStyle(fontSize: 14, height: 1.5),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Entendido',
+                    style: TextStyle(
+                        color: Color(0xFF2B5BFF),
+                        fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+      // ────────────────────────────────────────────────────────────────────────
+
       // Load current user's display name from Firestore
       String userName = user.displayName ?? 'Paciente';
       try {

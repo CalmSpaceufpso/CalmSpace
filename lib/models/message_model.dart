@@ -1,12 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Represents a single chat message.
 class MessageModel {
   final String id;
   final String senderId;
   final String senderName;
   final String text;
   final DateTime sentAt;
-  final bool isPending; // true when sent without internet
+
+  /// true = optimistic insert, Firestore write in progress
+  final bool isPending;
+
+  /// true = Firestore write failed (no internet / error) — stays in UI for retry
+  final bool isFailed;
 
   const MessageModel({
     required this.id,
@@ -15,6 +21,7 @@ class MessageModel {
     required this.text,
     required this.sentAt,
     this.isPending = false,
+    this.isFailed = false,
   });
 
   factory MessageModel.fromFirestore(Map<String, dynamic> data, String id) {
@@ -24,7 +31,6 @@ class MessageModel {
       senderName: data['senderName'] as String? ?? '',
       text: data['text'] as String? ?? '',
       sentAt: (data['sentAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      isPending: false,
     );
   }
 
@@ -35,21 +41,20 @@ class MessageModel {
         'sentAt': FieldValue.serverTimestamp(),
       };
 
-  /// Creates a local optimistic copy while the message is being uploaded.
-  MessageModel copyAsPending() => MessageModel(
+  MessageModel copyWith({bool? isPending, bool? isFailed}) => MessageModel(
         id: id,
         senderId: senderId,
         senderName: senderName,
         text: text,
         sentAt: sentAt,
-        isPending: true,
+        isPending: isPending ?? this.isPending,
+        isFailed: isFailed ?? this.isFailed,
       );
 }
 
-/// Represents a chat conversation between a patient and a psychologist,
-/// identified by their shared appointment.
+/// Represents a chat conversation preview (tied to an appointment).
 class ChatConversation {
-  final String chatId;         // appointmentId (used as document ID)
+  final String chatId;
   final String patientId;
   final String patientName;
   final String psychologistId;

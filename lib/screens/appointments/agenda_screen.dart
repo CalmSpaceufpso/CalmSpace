@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:calm_space/screens/profile/patient_detail_screen.dart';
+import '../../repositories/chat_repository.dart';
 import '../chat/chat_screen.dart';
 import 'appointment_detail_screen.dart';
 
@@ -977,6 +978,49 @@ class _PsychChatButtonState extends State<_PsychChatButton> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
+
+      // ── T3: Confirm appointment exists before opening chat ────────────────
+      final repo = ChatRepository();
+      final hasAppointment = await repo.hasActiveAppointment(
+        patientId: widget.patientId,
+        psychologistId: user.uid,
+      );
+
+      if (!mounted) return;
+
+      if (!hasAppointment) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20)),
+            title: const Row(children: [
+              Icon(Icons.lock_outline_rounded,
+                  color: Color(0xFF2B5BFF), size: 22),
+              SizedBox(width: 10),
+              Text('Acceso restringido',
+                  style: TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.bold)),
+            ]),
+            content: const Text(
+              'No existe una cita agendada y confirmada con este paciente.',
+              style: TextStyle(fontSize: 14, height: 1.5),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Entendido',
+                    style: TextStyle(
+                        color: Color(0xFF2B5BFF),
+                        fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
       String myName = user.displayName ?? 'Psicólogo';
       try {
         final doc = await FirebaseFirestore.instance
@@ -1007,6 +1051,7 @@ class _PsychChatButtonState extends State<_PsychChatButton> {
       if (mounted) setState(() => _loading = false);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
