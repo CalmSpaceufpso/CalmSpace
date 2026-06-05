@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 
 import 'firebase_options.dart';
+import 'services/notification_service.dart';
 import 'providers/psychologist_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/register_screen.dart';
@@ -22,6 +23,9 @@ void main() async {
     );
     firestoreReady = true;
   } catch (_) {}
+
+  // Inicializar servicio de notificaciones locales
+  await NotificationService.instance.initialize();
   runApp(CalmSpaceApp(firestoreReady: firestoreReady));
 }
 

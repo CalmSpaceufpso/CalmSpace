@@ -11,6 +11,7 @@ class UserProfile {
   final String? birthDate;
   final String? gender;
   final String? supportReason; // max 300
+  final String? moodReminderTime; // Format: "HH:mm"
 
   // Campos para Psicólogo
   final String? specialty;
@@ -34,6 +35,7 @@ class UserProfile {
     this.modality,
     this.description,
     this.contactPhone,
+    this.moodReminderTime,
   });
 
   factory UserProfile.fromMap(String uid, Map<String, dynamic> data) {
@@ -52,6 +54,7 @@ class UserProfile {
       modality: data['modality'],
       description: data['description'],
       contactPhone: data['contactPhone'],
+      moodReminderTime: data['moodReminderTime'],
     );
   }
 
@@ -70,6 +73,7 @@ class UserProfile {
       'modality': modality,
       'description': description,
       'contactPhone': contactPhone,
+      'moodReminderTime': moodReminderTime,
     }..removeWhere((key, value) => value == null);
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:calm_space/screens/profile/patient_detail_screen.dart';
+import '../services/notification_service.dart';
 import 'mood/mood_history_screen.dart';
 import 'profile/view_profile_screen.dart';
 import 'psychologists/psychologist_catalog_screen.dart';
@@ -30,6 +31,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool   _savingMood    = false;
   int    _todayCount    = 0;
   double? _todayAverage;
+
+  String _moodReminderTime = '20:00'; // Default 8:00 PM
 
   // Animación del check de confirmación
   late AnimationController _checkAnimCtrl;
@@ -70,10 +73,133 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           // Firestore puede usar 'fullName' (HU-04) o 'name' (registro antiguo)
           _nombre = d['fullName'] ?? d['name'] ?? user.displayName ?? _email;
           _email  = d['email']   ?? _email;
+          _moodReminderTime = d['moodReminderTime'] ?? '20:00';
           _loading = false;
         });
+
+        // Programar recordatorio diario solo para pacientes
+        if ((_role == 'Paciente') && mounted) {
+          if (d['moodReminderTime'] == null) {
+            // No tiene hora configurada, preguntarle en un Dialog bonito
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _showReminderSetupDialog();
+            });
+          } else {
+            final timeParts = _moodReminderTime.split(':');
+            final hour = int.tryParse(timeParts.isNotEmpty ? timeParts[0] : '20') ?? 20;
+            final minute = int.tryParse(timeParts.length > 1 ? timeParts[1] : '0') ?? 0;
+
+            await NotificationService.instance.requestPermissions();
+            await NotificationService.instance.scheduleDailyMoodReminder(
+              hour: hour,
+              minute: minute,
+              skipToday: _todayCount > 0, // Si ya registró hoy, saltar
+            );
+          }
+        }
       }
     } catch (_) { if (mounted) setState(() => _loading = false); }
+  }
+
+  Future<void> _showReminderSetupDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.notifications_active, color: Color(0xFF2563EB)),
+            SizedBox(width: 10),
+            Text('Tu bienestar diario', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text(
+          'Para ayudarte a llevar un mejor registro de tus emociones, ¿a qué hora te gustaría que te recordemos hacer tu check-in de ánimo?',
+          style: TextStyle(fontSize: 15, color: Color(0xFF64748B)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Más tarde', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2563EB),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Elegir hora'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      final picked = await showTimePicker(
+        context: context,
+        initialTime: const TimeOfDay(hour: 20, minute: 0),
+        helpText: 'Selecciona la hora de tu recordatorio',
+        builder: (ctx, child) => Theme(
+          data: Theme.of(ctx).copyWith(
+            colorScheme: const ColorScheme.light(primary: Color(0xFF2563EB)),
+          ),
+          child: child!,
+        ),
+      );
+
+      if (picked != null) {
+        final newTime = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+        setState(() => _moodReminderTime = newTime);
+        final uid = FirebaseAuth.instance.currentUser?.uid;
+        if (uid != null) {
+          await FirebaseFirestore.instance.collection('users').doc(uid).set(
+            {'moodReminderTime': newTime},
+            SetOptions(merge: true),
+          );
+        }
+        
+        await NotificationService.instance.requestPermissions();
+        await NotificationService.instance.scheduleDailyMoodReminder(
+          hour: picked.hour,
+          minute: picked.minute,
+          skipToday: _todayCount > 0,
+        );
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Recordatorio configurado para las $newTime ⏰'),
+              backgroundColor: const Color(0xFF6BAE8E),
+            ),
+          );
+        }
+      } else {
+        // Canceló el picker, guardamos un default para que no le siga preguntando siempre
+        _saveDefaultTime();
+      }
+    } else {
+      // Eligió "Más tarde", guardamos un default a las 20:00
+      _saveDefaultTime();
+    }
+  }
+
+  Future<void> _saveDefaultTime() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      await FirebaseFirestore.instance.collection('users').doc(uid).set(
+        {'moodReminderTime': '20:00'},
+        SetOptions(merge: true),
+      );
+    }
+    // Programamos el default silenciosamente
+    await NotificationService.instance.requestPermissions();
+    await NotificationService.instance.scheduleDailyMoodReminder(
+      hour: 20,
+      minute: 0,
+      skipToday: _todayCount > 0,
+    );
   }
 
   Future<void> _loadTodayMood() async {
@@ -122,6 +248,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) setState(() => _showCheck = false);
         });
+
+        // Re-programar el recordatorio para MAÑANA ya que ya registró hoy
+        final timeParts = _moodReminderTime.split(':');
+        final hour = int.tryParse(timeParts.isNotEmpty ? timeParts[0] : '20') ?? 20;
+        final minute = int.tryParse(timeParts.length > 1 ? timeParts[1] : '0') ?? 0;
+        NotificationService.instance.scheduleDailyMoodReminder(
+          hour: hour,
+          minute: minute,
+          skipToday: true,
+        );
 
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Row(children: [
@@ -200,6 +336,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         onMoodTap: _autoSaveMood,
         onLogout: _logout,
         onViewAllPsychologists: () => setState(() => _navIndex = 1),
+        moodReminderTime: _moodReminderTime,
+        onChangeReminderTime: (newTime) => setState(() => _moodReminderTime = newTime),
       ),
       const PsychologistCatalogScreen(),
       const AgendaScreen(),
@@ -288,6 +426,8 @@ class _HomeTab extends StatelessWidget {
   final ValueChanged<int> onMoodTap;
   final VoidCallback onLogout;
   final VoidCallback onViewAllPsychologists;
+  final String moodReminderTime;
+  final ValueChanged<String> onChangeReminderTime;
 
   static const Color _primary  = Color(0xFF2B5BFF);
   static const Color _textMain = Color(0xFF0D1B3E);
@@ -300,6 +440,8 @@ class _HomeTab extends StatelessWidget {
     required this.showCheck, required this.checkAnim,
     required this.onMoodTap, required this.onLogout,
     required this.onViewAllPsychologists,
+    required this.moodReminderTime,
+    required this.onChangeReminderTime,
   });
 
   @override
@@ -437,6 +579,7 @@ class _HomeTab extends StatelessWidget {
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeOutBack,
                       width: 60,
+                      height: 95, // Altura fija para que todos midan lo mismo
                       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
                       decoration: BoxDecoration(
                         gradient: isAvg ? LinearGradient(
@@ -627,6 +770,64 @@ class _HomeTab extends StatelessWidget {
                   ]),
                 ),
               ],
+              
+              // ── Botón para cambiar hora de recordatorio ──
+              const SizedBox(height: 12),
+              Center(
+                child: TextButton.icon(
+                  onPressed: () async {
+                    final timeParts = moodReminderTime.split(':');
+                    final initialHour = int.tryParse(timeParts.isNotEmpty ? timeParts[0] : '20') ?? 20;
+                    final initialMin = int.tryParse(timeParts.length > 1 ? timeParts[1] : '0') ?? 0;
+                    
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay(hour: initialHour, minute: initialMin),
+                      helpText: 'Cambiar hora de recordatorio',
+                      builder: (ctx, child) => Theme(
+                        data: Theme.of(ctx).copyWith(
+                          colorScheme: const ColorScheme.light(primary: Color(0xFF2563EB)),
+                        ),
+                        child: child!,
+                      ),
+                    );
+                    if (picked != null) {
+                      final newTime = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                      onChangeReminderTime(newTime);
+                      final uid = FirebaseAuth.instance.currentUser?.uid;
+                      if (uid != null) {
+                        await FirebaseFirestore.instance.collection('users').doc(uid).set(
+                          {'moodReminderTime': newTime},
+                          SetOptions(merge: true),
+                        );
+                      }
+                      await NotificationService.instance.scheduleDailyMoodReminder(
+                        hour: picked.hour,
+                        minute: picked.minute,
+                        skipToday: todayCount > 0,
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Recordatorio actualizado a las $newTime ⏰'),
+                            backgroundColor: const Color(0xFF6BAE8E),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.notifications_active_outlined, size: 16, color: Color(0xFF9E9E9E)),
+                  label: Text('Recordatorio: $moodReminderTime', 
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF9E9E9E), fontWeight: FontWeight.w500)),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    backgroundColor: Colors.grey.shade50,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
             ]),
           ),
 
