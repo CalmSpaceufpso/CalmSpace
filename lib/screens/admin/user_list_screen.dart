@@ -450,183 +450,412 @@ class _UserList extends StatelessWidget {
   }
 }
 
-// ── User card ─────────────────────────────────────────────────────────────────
+// ── User card (HU-19: with ban/delete actions) ────────────────────────────────
 
 class _UserCard extends StatelessWidget {
   final UserProfile user;
 
-  static const Color _primary  = Color(0xFF2B5BFF);
   static const Color _textMain = Color(0xFF0D1B3E);
 
   const _UserCard({required this.user});
 
-  @override
-  Widget build(BuildContext context) {
-    final initial = user.fullName.isNotEmpty
-        ? user.fullName[0].toUpperCase()
-        : '?';
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
-    final roleColor  = _roleColor(user.role);
-    final roleBg     = _roleBg(user.role);
-    final roleIcon   = _roleIcon(user.role);
-    final statusColor = _statusColor(user.status);
-    final statusLabel = _statusLabel(user.status);
+  bool get _isBanned => user.status == 'baneado';
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 3)),
+  void _showBanDialog(BuildContext context) {
+    final adminId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7ED),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.block_rounded,
+                color: Color(0xFFF59E0B), size: 22),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text('Banear usuario',
+                style: TextStyle(
+                    fontSize: 17, fontWeight: FontWeight.bold)),
+          ),
+        ]),
+        content: RichText(
+          text: TextSpan(
+            style: const TextStyle(
+                fontSize: 14, color: Color(0xFF374151), height: 1.55),
+            children: [
+              const TextSpan(text: '¿Confirmas banear a '),
+              TextSpan(
+                text: user.fullName.isNotEmpty ? user.fullName : 'este usuario',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const TextSpan(
+                  text: '? Su estado cambiará a Baneado y no podrá acceder.'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar',
+                style: TextStyle(color: Color(0xFF6B7280))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF59E0B),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sí, banear',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
-      child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: _Avatar(
-            photoUrl: user.photoUrl,
-            initial: initial,
-            color: roleColor),
-        title: Text(
-          user.fullName.isNotEmpty ? user.fullName : 'Sin nombre',
-          style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: _textMain),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 3),
-            Row(children: [
-              Icon(roleIcon, size: 12, color: roleColor),
-              const SizedBox(width: 4),
-              Text(user.role,
-                  style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: roleColor)),
-              if (user.role == 'Psicólogo' &&
-                  user.specialty != null &&
-                  user.specialty!.isNotEmpty) ...[
-                const Text(' · ',
-                    style: TextStyle(
-                        fontSize: 11, color: Color(0xFF8A94A6))),
-                Flexible(
-                  child: Text(user.specialty!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 11, color: Color(0xFF8A94A6))),
-                ),
-              ],
-            ]),
-          ],
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            // Role badge
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                  color: roleBg,
-                  borderRadius: BorderRadius.circular(20)),
-              child: Text(user.role,
-                  style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      color: roleColor)),
+    ).then((confirmed) async {
+      if (confirmed != true || !context.mounted) return;
+      final prov = context.read<UserListProvider>();
+      final ok = await prov.banUser(
+          targetUserId: user.uid, adminId: adminId);
+      if (!context.mounted) return;
+      _showSnackBar(
+        context,
+        ok
+            ? '✓ ${user.fullName.isNotEmpty ? user.fullName : 'Usuario'} baneado correctamente.'
+            : '✗ No se pudo banear al usuario. Intenta de nuevo.',
+        ok ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+      );
+    });
+  }
+
+  void _showDeleteDialog(BuildContext context) {
+    final adminId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF2F2),
+              borderRadius: BorderRadius.circular(10),
             ),
-            const SizedBox(height: 5),
-            // Status badge
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20)),
-              child: Text(statusLabel,
-                  style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: statusColor)),
-            ),
-          ],
+            child: const Icon(Icons.delete_forever_rounded,
+                color: Color(0xFFDC2626), size: 22),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text('Eliminar usuario',
+                style: TextStyle(
+                    fontSize: 17, fontWeight: FontWeight.bold)),
+          ),
+        ]),
+        content: RichText(
+          text: TextSpan(
+            style: const TextStyle(
+                fontSize: 14, color: Color(0xFF374151), height: 1.55),
+            children: [
+              const TextSpan(text: '¿Estás seguro de que deseas eliminar a '),
+              TextSpan(
+                text: user.fullName.isNotEmpty ? user.fullName : 'este usuario',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const TextSpan(
+                  text:
+                      '? Esta acción es permanente y no se puede deshacer.'),
+            ],
+          ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar',
+                style: TextStyle(color: Color(0xFF6B7280))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sí, eliminar',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
+    ).then((confirmed) async {
+      if (confirmed != true || !context.mounted) return;
+      final prov = context.read<UserListProvider>();
+      final ok = await prov.deleteUser(
+          targetUserId: user.uid, adminId: adminId);
+      if (!context.mounted) return;
+      _showSnackBar(
+        context,
+        ok
+            ? '✓ ${user.fullName.isNotEmpty ? user.fullName : 'Usuario'} eliminado correctamente.'
+            : '✗ No se pudo eliminar al usuario. Intenta de nuevo.',
+        ok ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+      );
+    });
+  }
+
+  void _showSnackBar(BuildContext context, String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message,
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w600)),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(12),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final initial =
+        user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : '?';
+    final roleColor   = _roleColor(user.role);
+    final roleIcon    = _roleIcon(user.role);
+    final statusColor = _statusColor(user.status);
+    final statusLabel = _statusLabel(user.status);
+    final isAdmin     = user.role == 'Admin';
+
+    return Consumer<UserListProvider>(
+      builder: (_, prov, __) {
+        final acting = prov.isActingOn(user.uid);
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          decoration: BoxDecoration(
+            color: _isBanned
+                ? const Color(0xFFFFF1F1)   // red tint for banned users
+                : Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: _isBanned
+                ? Border.all(color: const Color(0xFFFFCDD2), width: 1.5)
+                : null,
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3)),
+            ],
+          ),
+          child: ListTile(
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            leading: _Avatar(
+                photoUrl: user.photoUrl,
+                initial: initial,
+                color: _isBanned ? const Color(0xFFEF4444) : roleColor),
+            title: Text(
+              user.fullName.isNotEmpty ? user.fullName : 'Sin nombre',
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: _isBanned
+                      ? const Color(0xFF991B1B)
+                      : _textMain),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 3),
+                Row(children: [
+                  Icon(roleIcon, size: 12, color: roleColor),
+                  const SizedBox(width: 4),
+                  Text(user.role,
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: roleColor)),
+                  if (user.role == 'Psicólogo' &&
+                      user.specialty != null &&
+                      user.specialty!.isNotEmpty) ...[
+                    const Text(' · ',
+                        style: TextStyle(
+                            fontSize: 11, color: Color(0xFF8A94A6))),
+                    Flexible(
+                      child: Text(user.specialty!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 11, color: Color(0xFF8A94A6))),
+                    ),
+                  ],
+                ]),
+              ],
+            ),
+            trailing: acting
+                // ── Per-card loading spinner ─────────────────────────────
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Color(0xFF2B5BFF)),
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // ── Status badge ─────────────────────────────────────
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                            color: statusColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20)),
+                        child: Text(statusLabel,
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: statusColor)),
+                      ),
+                      // ── Action menu ──────────────────────────────────────
+                      Tooltip(
+                        message: isAdmin
+                            ? 'No se puede actuar sobre un Administrador'
+                            : 'Acciones',
+                        child: PopupMenuButton<_UserAction>(
+                          enabled: !isAdmin,
+                          icon: Icon(
+                            Icons.more_vert_rounded,
+                            color: isAdmin
+                                ? const Color(0xFFCBD5E1)
+                                : const Color(0xFF8A94A6),
+                            size: 20,
+                          ),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                          itemBuilder: (_) => [
+                            // Ban item (hidden if already banned)
+                            if (!_isBanned)
+                              PopupMenuItem(
+                                value: _UserAction.ban,
+                                child: Row(children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFFF7ED),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(
+                                        Icons.block_rounded,
+                                        color: Color(0xFFF59E0B),
+                                        size: 16),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  const Text('Banear',
+                                      style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFFF59E0B))),
+                                ]),
+                              ),
+                            // Delete item
+                            PopupMenuItem(
+                              value: _UserAction.delete,
+                              child: Row(children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF2F2),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                      Icons.delete_forever_rounded,
+                                      color: Color(0xFFDC2626),
+                                      size: 16),
+                                ),
+                                const SizedBox(width: 10),
+                                const Text('Eliminar',
+                                    style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFFDC2626))),
+                              ]),
+                            ),
+                          ],
+                          onSelected: (action) {
+                            if (action == _UserAction.ban) {
+                              _showBanDialog(context);
+                            } else {
+                              _showDeleteDialog(context);
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        );
+      },
     );
   }
 
   Color _roleColor(String role) {
     switch (role) {
-      case 'Psicólogo':
-        return const Color(0xFF7C3AED);
-      case 'Admin':
-        return const Color(0xFF0891B2);
-      default:
-        return const Color(0xFF2B5BFF);
+      case 'Psicólogo': return const Color(0xFF7C3AED);
+      case 'Admin':     return const Color(0xFF0891B2);
+      default:          return const Color(0xFF2B5BFF);
     }
   }
 
-  Color _roleBg(String role) {
-    switch (role) {
-      case 'Psicólogo':
-        return const Color(0xFFF5F3FF);
-      case 'Admin':
-        return const Color(0xFFE0F2FE);
-      default:
-        return const Color(0xFFEEF2FF);
-    }
-  }
 
   IconData _roleIcon(String role) {
     switch (role) {
-      case 'Psicólogo':
-        return Icons.psychology_rounded;
-      case 'Admin':
-        return Icons.admin_panel_settings_rounded;
-      default:
-        return Icons.person_rounded;
+      case 'Psicólogo': return Icons.psychology_rounded;
+      case 'Admin':     return Icons.admin_panel_settings_rounded;
+      default:          return Icons.person_rounded;
     }
   }
 
   Color _statusColor(String status) {
     switch (status) {
       case 'aprobado':
-      case 'activo':
-        return const Color(0xFF16A34A);
-      case 'pendiente':
-        return const Color(0xFFF59E0B);
-      case 'rechazado':
-        return const Color(0xFFEF4444);
-      default:
-        return const Color(0xFF8A94A6);
+      case 'activo':    return const Color(0xFF16A34A);
+      case 'pendiente': return const Color(0xFFF59E0B);
+      case 'baneado':
+      case 'rechazado': return const Color(0xFFEF4444);
+      default:          return const Color(0xFF8A94A6);
     }
   }
 
   String _statusLabel(String status) {
     switch (status) {
-      case 'aprobado':
-        return 'Aprobado';
-      case 'activo':
-        return 'Activo';
-      case 'pendiente':
-        return 'Pendiente';
-      case 'rechazado':
-        return 'Rechazado';
-      default:
-        return status;
+      case 'aprobado':  return 'Aprobado';
+      case 'activo':    return 'Activo';
+      case 'pendiente': return 'Pendiente';
+      case 'baneado':   return 'Baneado';
+      case 'rechazado': return 'Rechazado';
+      default:          return status;
     }
   }
 }
+
+/// Enum for the two moderation actions available in the popup menu.
+enum _UserAction { ban, delete }
 
 // ── Avatar ────────────────────────────────────────────────────────────────────
 
