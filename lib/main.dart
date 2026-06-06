@@ -106,9 +106,13 @@ class CalmSpaceApp extends StatelessWidget {
                   final role   = data['role']   ?? 'Paciente';
                   final status = data['status'] ?? 'activo';
 
+                  if (status == 'baneado') {
+                    return _BannedScreen();
+                  }
+
                   if (role == 'Psicólogo' &&
                       (status == 'pendiente' || status == 'rechazado')) {
-                    return _PendingScreen();
+                    return _PendingScreen(status: status);
                   }
                 }
 
@@ -122,8 +126,54 @@ class CalmSpaceApp extends StatelessWidget {
   }
 }
 
-// ── PENDING SCREEN ─────────────────────────────────────────────────────────
+// ── PENDING / REJECTED SCREEN ──────────────────────────────────────────────
 class _PendingScreen extends StatelessWidget {
+  final dynamic status;
+
+  const _PendingScreen({this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final isRejected = status == 'rechazado';
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F6FB),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(isRejected ? Icons.cancel_rounded : Icons.hourglass_top_rounded,
+                  size: 64, color: isRejected ? const Color(0xFFE11D48) : const Color(0xFF1D35B4)),
+              const SizedBox(height: 20),
+              Text(isRejected ? 'Solicitud Rechazada' : 'Cuenta en revisión',
+                  style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1E293B))),
+              const SizedBox(height: 10),
+              Text(
+                isRejected 
+                  ? 'Tu solicitud para ser psicólogo en CalmSpace no fue aprobada por los administradores.' 
+                  : 'Tu cuenta de psicólogo está siendo verificada.\nTe notificaremos cuando sea aprobada.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+              ),
+              const SizedBox(height: 32),
+              OutlinedButton(
+                onPressed: () => FirebaseAuth.instance.signOut(),
+                child: const Text('Cerrar sesión'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── BANNED SCREEN ──────────────────────────────────────────────────────────
+class _BannedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -134,17 +184,16 @@ class _PendingScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.hourglass_top_rounded,
-                  size: 64, color: Color(0xFF1D35B4)),
+              const Icon(Icons.block_rounded, size: 64, color: Color(0xFFE11D48)),
               const SizedBox(height: 20),
-              const Text('Cuenta en revisión',
+              const Text('Cuenta suspendida',
                   style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF1E293B))),
               const SizedBox(height: 10),
               const Text(
-                'Tu cuenta de psicólogo está siendo verificada.\nTe notificaremos cuando sea aprobada.',
+                'Tu cuenta ha sido suspendida permanentemente por incumplir los términos de servicio de la plataforma.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
               ),

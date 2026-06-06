@@ -58,9 +58,9 @@ class _OwnProfileView extends StatelessWidget {
   final UserProfile profile;
   final VoidCallback onRefresh;
 
-  static const Color _primary    = Color(0xFF2563EB);
-  static const Color _background = Color(0xFFF0F2F5);
-  static const Color _textMain   = Color(0xFF111827);
+  static const Color _primary    = Color(0xFF2B5BFF);
+  static const Color _background = Color(0xFFF4F6FB);
+  static const Color _textMain   = Color(0xFF0D1B3E);
 
   const _OwnProfileView({required this.profile, required this.onRefresh});
 
@@ -68,8 +68,9 @@ class _OwnProfileView extends StatelessWidget {
   Widget build(BuildContext context) {
     final inicial = profile.fullName.isNotEmpty ? profile.fullName[0].toUpperCase() : 'U';
     final isPsi = profile.role == 'Psicólogo';
-    final roleLabel = isPsi ? 'Psicólogo' : 'Paciente';
-    final roleIcon  = isPsi ? Icons.psychology_outlined : Icons.self_improvement_rounded;
+    final isAdmin = profile.role == 'Admin';
+    final roleLabel = isAdmin ? 'Administrador' : (isPsi ? 'Psicólogo' : 'Paciente');
+    final roleIcon  = isAdmin ? Icons.admin_panel_settings_rounded : (isPsi ? Icons.psychology_rounded : Icons.self_improvement_rounded);
 
     return Scaffold(
       backgroundColor: _background,
@@ -78,10 +79,10 @@ class _OwnProfileView extends StatelessWidget {
         elevation: 0,
         automaticallyImplyLeading: false,
         title: const Text('Mi Perfil',
-            style: TextStyle(color: _textMain, fontWeight: FontWeight.bold, fontSize: 20)),
+            style: TextStyle(color: _textMain, fontWeight: FontWeight.w900, fontSize: 24)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_outlined, color: _textMain),
+            icon: const Icon(Icons.settings_outlined, color: _textMain, size: 26),
             onPressed: () async {
               final result = await Navigator.push(
                 context, MaterialPageRoute(builder: (_) => const EditProfileScreen()),
@@ -89,91 +90,106 @@ class _OwnProfileView extends StatelessWidget {
               if (result == true) onRefresh();
             },
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
-
-            // ── HEADER CON GRADIENTE ───────────────────────────
+            // ── HEADER CON GRADIENTE PREMIUM ───────────────────────────
             Container(
               width: double.infinity,
-              margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+              margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF2563EB), Color(0xFF60A5FA)],
+                  colors: [Color(0xFF2B5BFF), Color(0xFF5E81FF)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(32),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF2B5BFF).withValues(alpha: 0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
-                  // Avatar con borde blanco
+                  // Avatar con doble borde
                   Container(
                     padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
-                    child: CircleAvatar(
-                      radius: 52,
-                      backgroundColor: const Color(0xFF1D4ED8),
-                      backgroundImage: profile.photoUrl != null && profile.photoUrl!.isNotEmpty
-                          ? (profile.photoUrl!.startsWith('http')
-                              ? NetworkImage(profile.photoUrl!)
-                              : MemoryImage(base64Decode(profile.photoUrl!.split(',').last)) as ImageProvider)
-                          : null,
-                      child: (profile.photoUrl == null || profile.photoUrl!.isEmpty)
-                          ? Text(
-                              inicial,
-                              style: const TextStyle(
-                                fontSize: 42, color: Colors.white, fontWeight: FontWeight.bold,
-                              ),
-                            )
-                          : null,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: CircleAvatar(
+                        radius: 54,
+                        backgroundColor: const Color(0xFF1D35B4),
+                        backgroundImage: profile.photoUrl != null && profile.photoUrl!.isNotEmpty
+                            ? (profile.photoUrl!.startsWith('http')
+                                ? NetworkImage(profile.photoUrl!)
+                                : MemoryImage(base64Decode(profile.photoUrl!.split(',').last)) as ImageProvider)
+                            : null,
+                        child: (profile.photoUrl == null || profile.photoUrl!.isEmpty)
+                            ? Text(
+                                inicial,
+                                style: const TextStyle(
+                                  fontSize: 44, color: Colors.white, fontWeight: FontWeight.w800,
+                                ),
+                              )
+                            : null,
+                      ),
                     ),
                   ),
 
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
 
                   // Nombre
                   Text(
                     profile.fullName,
                     style: const TextStyle(
-                      fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white,
+                      fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white,
                     ),
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
 
-                  // Badge de rol
+                  // Badge de rol con Glassmorphism
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(roleIcon, size: 14, color: Colors.white),
+                        Icon(roleIcon, size: 16, color: Colors.white),
                         const SizedBox(width: 6),
                         Text(
                           roleLabel,
                           style: const TextStyle(
-                            fontSize: 13, color: Colors.white, fontWeight: FontWeight.w600,
+                            fontSize: 14, color: Colors.white, fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 20),
 
-                  // Ver datos de cuenta
+                  // Ver datos de cuenta (Botón sutil)
                   GestureDetector(
                     onTap: () async {
                       final result = await Navigator.push(
@@ -181,20 +197,25 @@ class _OwnProfileView extends StatelessWidget {
                       );
                       if (result == true) onRefresh();
                     },
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'Ver datos de cuenta',
-                          style: TextStyle(
-                            color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500,
-                            decoration: TextDecoration.underline,
-                            decorationColor: Colors.white,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Ver datos de cuenta',
+                            style: TextStyle(
+                              color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.chevron_right, color: Colors.white, size: 16),
-                      ],
+                          SizedBox(width: 4),
+                          Icon(Icons.chevron_right_rounded, color: Colors.white, size: 18),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -272,19 +293,18 @@ class _OwnProfileView extends StatelessWidget {
 
             // ── CERRAR SESIÓN ──────────────────────────────────
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: SizedBox(
                 width: double.infinity,
-                height: 52,
-                child: OutlinedButton.icon(
+                height: 54,
+                child: TextButton.icon(
                   onPressed: () async => await FirebaseAuth.instance.signOut(),
-                  icon: const Icon(Icons.logout_rounded, size: 18),
+                  icon: const Icon(Icons.logout_rounded, size: 20, color: Color(0xFFE11D48)),
                   label: const Text('Cerrar Sesión',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _primary,
-                    side: const BorderSide(color: _primary, width: 1.5),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFFE11D48))),
+                  style: TextButton.styleFrom(
+                    backgroundColor: const Color(0xFFE11D48).withValues(alpha: 0.1),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   ),
                 ),
               ),
@@ -539,7 +559,7 @@ class _InfoCard extends StatelessWidget {
   final String subtitle;
   final Gradient? gradient;
   final Color? iconColor;
-  static const Color _primary = Color(0xFF2563EB);
+  static const Color _primary = Color(0xFF2B5BFF);
 
   const _InfoCard({
     required this.icon,
@@ -553,25 +573,34 @@ class _InfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           gradient: gradient,
           color: gradient == null ? Colors.white : null,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: (iconColor ?? _primary).withValues(alpha: 0.15),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            )
+          ],
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: iconColor ?? _primary, size: 22),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF111827))),
-                const SizedBox(height: 2),
-                Text(subtitle, style: const TextStyle(fontSize: 11, color: Color(0xFF9E9E9E))),
-              ],
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: iconColor ?? _primary, size: 24),
             ),
+            const SizedBox(height: 14),
+            Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0D1B3E))),
+            const SizedBox(height: 4),
+            Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF8A94A6))),
           ],
         ),
       ),
@@ -584,25 +613,33 @@ class _ActionRow extends StatelessWidget {
   final String label;
   final String? subtitle;
   final VoidCallback onTap;
-  static const Color _primary = Color(0xFF2563EB);
+  static const Color _primary = Color(0xFF2B5BFF);
 
   const _ActionRow({required this.icon, required this.label, this.subtitle, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: ListTile(
         onTap: onTap,
-        leading: Icon(icon, color: _primary, size: 22),
-        title: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
-        subtitle: subtitle != null ? Text(subtitle!, style: const TextStyle(fontSize: 12, color: Color(0xFF9E9E9E))) : null,
-        trailing: const Icon(Icons.chevron_right, color: Color(0xFF9E9E9E)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: _primary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: _primary, size: 22),
+        ),
+        title: Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF0D1B3E))),
+        subtitle: subtitle != null ? Text(subtitle!, style: const TextStyle(fontSize: 12, color: Color(0xFF8A94A6))) : null,
+        trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFFCBD5E1), size: 24),
       ),
     );
   }
@@ -619,24 +656,35 @@ class _ActionRowToggle extends StatefulWidget {
 
 class _ActionRowToggleState extends State<_ActionRowToggle> {
   bool _enabled = true;
-  static const Color _primary = Color(0xFF2563EB);
+  static const Color _primary = Color(0xFF2B5BFF);
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: ListTile(
-        leading: Icon(widget.icon, color: _primary, size: 22),
-        title: Text(widget.label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: _primary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(widget.icon, color: _primary, size: 22),
+        ),
+        title: Text(widget.label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF0D1B3E))),
         trailing: Switch(
           value: _enabled,
           onChanged: (v) => setState(() => _enabled = v),
-          activeThumbColor: _primary,
+          activeColor: Colors.white,
+          activeTrackColor: _primary,
+          inactiveTrackColor: const Color(0xFFE2E8F0),
+          inactiveThumbColor: Colors.white,
         ),
       ),
     );
