@@ -13,7 +13,7 @@ class PsychologistApprovalScreen extends StatelessWidget {
   static const Color _bg        = Color(0xFFF4F6FB);
   static const Color _textMain  = Color(0xFF0D1B3E);
   static const Color _textSub   = Color(0xFF8A94A6);
-  static const Color _approved  = Color(0xFF10B981);
+  static const Color _approved  = Color(0xFF2B5BFF);
   static const Color _rejected  = Color(0xFFEF4444);
   static const Color _pending   = Color(0xFFF59E0B);
 
@@ -128,7 +128,7 @@ class _PsychologistList extends StatelessWidget {
   const _PsychologistList({required this.statusFilter});
 
   static const Color _pending  = Color(0xFFF59E0B);
-  static const Color _approved = Color(0xFF10B981);
+  static const Color _approved = Color(0xFF2B5BFF);
   static const Color _rejected = Color(0xFFEF4444);
   static const Color _bg       = Color(0xFFF4F6FB);
   static const Color _textSub  = Color(0xFF8A94A6);
@@ -253,7 +253,7 @@ class _PsychologistCardState extends State<_PsychologistCard> {
   static const Color _primary  = Color(0xFF2B5BFF);
   static const Color _textMain = Color(0xFF0D1B3E);
   static const Color _textSub  = Color(0xFF8A94A6);
-  static const Color _approved = Color(0xFF10B981);
+  static const Color _approved = Color(0xFF2B5BFF);
   static const Color _rejected = Color(0xFFEF4444);
   static const Color _pending  = Color(0xFFF59E0B);
 

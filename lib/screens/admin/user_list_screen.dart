@@ -533,7 +533,7 @@ class _UserCard extends StatelessWidget {
         ok
             ? '✓ ${user.fullName.isNotEmpty ? user.fullName : 'Usuario'} baneado correctamente.'
             : '✗ No se pudo banear al usuario. Intenta de nuevo.',
-        ok ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+        ok ? const Color(0xFF2B5BFF) : const Color(0xFFDC2626),
       );
     });
   }
@@ -609,7 +609,7 @@ class _UserCard extends StatelessWidget {
         ok
             ? '✓ ${user.fullName.isNotEmpty ? user.fullName : 'Usuario'} eliminado correctamente.'
             : '✗ No se pudo eliminar al usuario. Intenta de nuevo.',
-        ok ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+        ok ? const Color(0xFF2B5BFF) : const Color(0xFFDC2626),
       );
     });
   }
@@ -834,7 +834,7 @@ class _UserCard extends StatelessWidget {
   Color _statusColor(String status) {
     switch (status) {
       case 'aprobado':
-      case 'activo':    return const Color(0xFF16A34A);
+      case 'activo':    return const Color(0xFF2B5BFF);
       case 'pendiente': return const Color(0xFFF59E0B);
       case 'baneado':
       case 'rechazado': return const Color(0xFFEF4444);
