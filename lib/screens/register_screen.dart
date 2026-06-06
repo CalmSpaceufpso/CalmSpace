@@ -59,7 +59,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'name'     : _nameCtrl.text.trim(),
         'email'    : cred.user!.email,
         'role'     : _role,
-        'status'   : 'activo', // TODO: Cambiar a 'pendiente' cuando se cree el panel de administrador
+        // Psicólogos inician en 'pendiente' hasta que el Admin los apruebe (HU-20)
+        'status'   : isPsi ? 'pendiente' : 'activo',
         'createdAt': FieldValue.serverTimestamp(),
         if (isPsi) ...{
           if (_licenseCtrl.text.isNotEmpty) 'license': _licenseCtrl.text.trim(),

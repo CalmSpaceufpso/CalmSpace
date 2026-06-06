@@ -49,7 +49,7 @@ class UserProfile {
   factory UserProfile.fromMap(String uid, Map<String, dynamic> data) {
     return UserProfile(
       uid: uid,
-      fullName: data['name'] ?? '',
+      fullName: data['name'] ?? data['fullName'] ?? '',
       role: data['role'] ?? 'Paciente',
       photoUrl: data['photoUrl'],
       status: data['status'] ?? 'activo',
@@ -59,7 +59,7 @@ class UserProfile {
       supportReason: data['supportReason'],
       specialty: data['specialty'],
       experienceYears: data['experienceYears'],
-      modality: data['modality'],
+      modality: data['modality'] ?? data['modalidad'],
       description: data['description'],
       contactPhone: data['contactPhone'],
       pricePerSession: (data['pricePerSession'] as num?)?.toDouble(),
