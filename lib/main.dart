@@ -14,6 +14,7 @@ import 'screens/profile/view_profile_screen.dart';
 import 'screens/availability/manage_availability_screen.dart';
 import 'screens/psychologists/psychologist_catalog_screen.dart';
 import 'screens/admin/psychologist_approval_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,10 +63,45 @@ class CalmSpaceApp extends StatelessWidget {
             return ViewProfileScreen(uid: uid, isOwnProfile: true);
           },
         },
-        home: StreamBuilder<User?>(
-          stream: FirebaseAuth.instance.authStateChanges(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+        home: SplashScreen(firestoreReady: firestoreReady),
+      ),
+    );
+  }
+}
+
+class AuthGate extends StatelessWidget {
+  final bool firestoreReady;
+  const AuthGate({super.key, required this.firestoreReady});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: Color(0xFFF4F6FB),
+            body: Center(
+              child: CircularProgressIndicator(color: Color(0xFF1D35B4)),
+            ),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data == null) {
+          return const LoginScreen();
+        }
+
+        final uid = snapshot.data!.uid;
+
+        return FutureBuilder<DocumentSnapshot>(
+          // Siempre leer del servidor para obtener el rol actualizado (HU-20)
+          key: ValueKey('user_doc_$uid'),
+          future: FirebaseFirestore.instance
+              .collection('users')
+              .doc(uid)
+              .get(const GetOptions(source: Source.server)),
+          builder: (context, userSnap) {
+            if (userSnap.connectionState == ConnectionState.waiting) {
               return const Scaffold(
                 backgroundColor: Color(0xFFF4F6FB),
                 body: Center(
@@ -74,56 +110,31 @@ class CalmSpaceApp extends StatelessWidget {
               );
             }
 
-            if (!snapshot.hasData || snapshot.data == null) {
-              return const LoginScreen();
+            // Si Firestore falla, ir al Home igual (no bloquear el login)
+            if (userSnap.hasError) {
+              return HomeScreen(firestoreReady: firestoreReady);
             }
 
-            final uid = snapshot.data!.uid;
+            if (userSnap.hasData && userSnap.data!.exists) {
+              final data   = userSnap.data!.data() as Map<String, dynamic>;
+              final role   = (data['role'] ?? 'Paciente').toString().trim();
+              final status = data['status'] ?? 'activo';
 
-            return FutureBuilder<DocumentSnapshot>(
-              // Siempre leer del servidor para obtener el rol actualizado (HU-20)
-              key: ValueKey('user_doc_$uid'),
-              future: FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(uid)
-                  .get(const GetOptions(source: Source.server)),
-              builder: (context, userSnap) {
-                if (userSnap.connectionState == ConnectionState.waiting) {
-                  return const Scaffold(
-                    backgroundColor: Color(0xFFF4F6FB),
-                    body: Center(
-                      child: CircularProgressIndicator(color: Color(0xFF1D35B4)),
-                    ),
-                  );
-                }
+              final r = role.toLowerCase();
+              final isPsi = r == 'psicólogo' || r == 'psicologo';
 
-                // Si Firestore falla, ir al Home igual (no bloquear el login)
-                if (userSnap.hasError) {
-                  return HomeScreen(firestoreReady: firestoreReady);
-                }
+              if (isPsi && status == 'pendiente') {
+                return const _PendingScreen(rejected: false);
+              }
+              if (isPsi && status == 'rechazado') {
+                return const _PendingScreen(rejected: true);
+              }
+            }
 
-                if (userSnap.hasData && userSnap.data!.exists) {
-                  final data   = userSnap.data!.data() as Map<String, dynamic>;
-                  final role   = (data['role'] ?? 'Paciente').toString().trim();
-                  final status = data['status'] ?? 'activo';
-
-                  final r = role.toLowerCase();
-                  final isPsi = r == 'psicólogo' || r == 'psicologo';
-
-                  if (isPsi && status == 'pendiente') {
-                    return _PendingScreen(rejected: false);
-                  }
-                  if (isPsi && status == 'rechazado') {
-                    return _PendingScreen(rejected: true);
-                  }
-                }
-
-                return HomeScreen(firestoreReady: firestoreReady);
-              },
-            );
+            return HomeScreen(firestoreReady: firestoreReady);
           },
-        ),
-      ),
+        );
+      },
     );
   }
 }
