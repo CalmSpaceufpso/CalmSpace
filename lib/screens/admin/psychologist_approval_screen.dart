@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/user_profile.dart';
+import '../profile/view_profile_screen.dart';
 
 // ── HU-20: Aprobación de Psicólogos ──────────────────────────────────────────
 
@@ -408,13 +409,25 @@ class _PsychologistCardState extends State<_PsychologistCard> {
     final isApproved = widget.statusFilter == 'activo';
     final isRejected = widget.statusFilter == 'rechazado';
 
-    return AnimatedContainer(
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ViewProfileScreen(
+              uid: psy.uid,
+              isOwnProfile: false,
+            ),
+          ),
+        );
+      },
+      child: AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       decoration: BoxDecoration(
         color: isRejected
             ? const Color(0xFFFFF8F8)
             : isApproved
-                ? const Color(0xFFF0FDF4)
+                ? const Color(0xFFEEF2FF)
                 : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: isRejected
@@ -653,7 +666,7 @@ class _PsychologistCardState extends State<_PsychologistCard> {
           ],
         ]),
       ),
-    );
+    ));
   }
 
   Color _statusColor(String status) => switch (status) {
