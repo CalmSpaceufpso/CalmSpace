@@ -277,9 +277,7 @@ class _OwnProfileView extends StatelessWidget {
                   _ActionRow(
                     icon: Icons.lock_outline,
                     label: 'Seguridad y Contraseña',
-                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Próximamente')),
-                    ),
+                    onTap: () => _showChangePasswordSheet(context),
                   ),
                   _ActionRowToggle(
                     icon: Icons.notifications_none_outlined,
@@ -1007,6 +1005,257 @@ Color _statusColor(String status) => switch (status) {
       'rechazado' => Color(0xFFEF4444),
       _           => Color(0xFF8A94A6),
     };
+
+// ── Change password sheet ──────────────────────────────────────────────────────
+
+void _showChangePasswordSheet(BuildContext context) {
+  final currentPassCtrl = TextEditingController();
+  final newPassCtrl     = TextEditingController();
+  final confirmPassCtrl = TextEditingController();
+  bool obscureCurrent   = true;
+  bool obscureNew       = true;
+  bool obscureConfirm   = true;
+  bool loading          = false;
+  String? errorMsg;
+
+  final user = FirebaseAuth.instance.currentUser;
+  final isGoogleUser = user?.providerData.any((p) => p.providerId == 'google.com') ?? false;
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setSheet) {
+        Future<void> submit() async {
+          final current = currentPassCtrl.text.trim();
+          final newPass = newPassCtrl.text.trim();
+          final confirm = confirmPassCtrl.text.trim();
+
+          if (current.isEmpty || newPass.isEmpty || confirm.isEmpty) {
+            setSheet(() => errorMsg = 'Por favor, completa todos los campos.');
+            return;
+          }
+          if (newPass.length < 6) {
+            setSheet(() => errorMsg = 'La nueva contraseña debe tener al menos 6 caracteres.');
+            return;
+          }
+          if (newPass != confirm) {
+            setSheet(() => errorMsg = 'Las contraseñas nuevas no coinciden.');
+            return;
+          }
+
+          setSheet(() { loading = true; errorMsg = null; });
+
+          try {
+            final credential = EmailAuthProvider.credential(
+              email: user!.email!,
+              password: current,
+            );
+            await user.reauthenticateWithCredential(credential);
+            await user.updatePassword(newPass);
+
+            if (ctx.mounted) Navigator.pop(ctx);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: const Text('✓ Contraseña actualizada correctamente.',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                backgroundColor: const Color(0xFF2B5BFF),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                margin: const EdgeInsets.all(12),
+              ));
+            }
+          } on FirebaseAuthException catch (e) {
+            String msg = 'Error al actualizar la contraseña.';
+            if (e.code == 'wrong-password')        msg = 'La contraseña actual es incorrecta.';
+            if (e.code == 'invalid-credential')    msg = 'La contraseña actual es incorrecta.';
+            if (e.code == 'weak-password')         msg = 'La nueva contraseña es muy débil.';
+            if (e.code == 'requires-recent-login') msg = 'Cierra sesión y vuelve a ingresar para continuar.';
+            setSheet(() { loading = false; errorMsg = msg; });
+          } catch (_) {
+            setSheet(() { loading = false; errorMsg = 'Ocurrió un error inesperado.'; });
+          }
+        }
+
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE2E8F0),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(children: [
+                  Container(
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEEF2FF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.lock_rounded, color: Color(0xFF2B5BFF), size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('Cambiar Contraseña',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF0D1B3E))),
+                ]),
+                const SizedBox(height: 6),
+                const Padding(
+                  padding: EdgeInsets.only(left: 4),
+                  child: Text('Ingresa tu contraseña actual y la nueva para continuar.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF8A94A6))),
+                ),
+                const SizedBox(height: 20),
+
+                if (isGoogleUser)
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7ED),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFFDBA74)),
+                    ),
+                    child: const Row(children: [
+                      Icon(Icons.info_outline_rounded, color: Color(0xFFF97316), size: 18),
+                      SizedBox(width: 10),
+                      Expanded(child: Text(
+                        'Tu cuenta usa Google para iniciar sesión. No puedes cambiar la contraseña aquí.',
+                        style: TextStyle(fontSize: 13, color: Color(0xFF92400E)),
+                      )),
+                    ]),
+                  )
+                else ...[
+                  _PasswordField(
+                    controller: currentPassCtrl,
+                    label: 'Contraseña actual',
+                    obscure: obscureCurrent,
+                    onToggle: () => setSheet(() => obscureCurrent = !obscureCurrent),
+                  ),
+                  const SizedBox(height: 12),
+                  _PasswordField(
+                    controller: newPassCtrl,
+                    label: 'Nueva contraseña',
+                    obscure: obscureNew,
+                    onToggle: () => setSheet(() => obscureNew = !obscureNew),
+                  ),
+                  const SizedBox(height: 12),
+                  _PasswordField(
+                    controller: confirmPassCtrl,
+                    label: 'Confirmar nueva contraseña',
+                    obscure: obscureConfirm,
+                    onToggle: () => setSheet(() => obscureConfirm = !obscureConfirm),
+                  ),
+                  if (errorMsg != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                      ),
+                      child: Row(children: [
+                        const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(errorMsg!,
+                            style: const TextStyle(fontSize: 12, color: Color(0xFFB91C1C)))),
+                      ]),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: loading ? null : submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2B5BFF),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: loading
+                          ? const SizedBox(width: 20, height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Text('Actualizar Contraseña',
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
+
+// ── Password field widget ─────────────────────────────────────────────────────
+
+class _PasswordField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final bool obscure;
+  final VoidCallback onToggle;
+
+  const _PasswordField({
+    required this.controller,
+    required this.label,
+    required this.obscure,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      obscureText: obscure,
+      style: const TextStyle(fontSize: 14, color: Color(0xFF0D1B3E)),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF8A94A6)),
+        filled: true,
+        fillColor: const Color(0xFFF4F6FB),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFF2B5BFF), width: 1.5),
+        ),
+        suffixIcon: IconButton(
+          icon: Icon(
+            obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+            color: const Color(0xFF8A94A6),
+            size: 20,
+          ),
+          onPressed: onToggle,
+        ),
+      ),
+    );
+  }
+}
 
 class _InfoCard extends StatelessWidget {
   final IconData icon;
