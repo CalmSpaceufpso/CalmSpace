@@ -529,6 +529,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         nombre: _nombre,
         onGoToUsers: () => setState(() => _navIndex = 1),
         onGoToPsychologists: () => setState(() => _navIndex = 2),
+        onGoToProfile: () => setState(() => _navIndex = 3),
       ),
       ChangeNotifierProvider(
         create: (_) => UserListProvider(),
@@ -2118,10 +2119,12 @@ class _AdminHomeTab extends StatelessWidget {
   final String nombre;
   final VoidCallback onGoToUsers;
   final VoidCallback onGoToPsychologists;
+  final VoidCallback onGoToProfile;
   const _AdminHomeTab({
     required this.nombre,
     required this.onGoToUsers,
     required this.onGoToPsychologists,
+    required this.onGoToProfile,
   });
 
   static const Color _primary  = Color(0xFF2B5BFF);
@@ -2158,19 +2161,22 @@ class _AdminHomeTab extends StatelessWidget {
                     ],
                   ),
                 ),
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF2B5BFF), Color(0xFF5E81FF)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                GestureDetector(
+                  onTap: onGoToProfile,
+                  child: Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF2B5BFF), Color(0xFF5E81FF)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    borderRadius: BorderRadius.circular(14),
+                    child: const Icon(Icons.admin_panel_settings_rounded,
+                        color: Colors.white, size: 24),
                   ),
-                  child: const Icon(Icons.admin_panel_settings_rounded,
-                      color: Colors.white, size: 24),
                 ),
               ]),
 
@@ -2205,6 +2211,7 @@ class _AdminHomeTab extends StatelessWidget {
                         value: total.toString(),
                         color: _primary,
                         bg: const Color(0xFFEEF2FF),
+                        onTap: onGoToUsers,
                       )),
                       const SizedBox(width: 12),
                       Expanded(child: _AdminStatCard(
@@ -2213,6 +2220,7 @@ class _AdminHomeTab extends StatelessWidget {
                         value: patients.toString(),
                         color: const Color(0xFF0891B2),
                         bg: const Color(0xFFE0F2FE),
+                        onTap: onGoToUsers,
                       )),
                     ]),
                     const SizedBox(height: 12),
@@ -2223,6 +2231,7 @@ class _AdminHomeTab extends StatelessWidget {
                         value: psychs.toString(),
                         color: const Color(0xFF7C3AED),
                         bg: const Color(0xFFF5F3FF),
+                        onTap: onGoToPsychologists,
                       )),
                       const SizedBox(width: 12),
                       Expanded(child: _AdminStatCard(
@@ -2231,6 +2240,7 @@ class _AdminHomeTab extends StatelessWidget {
                         value: pending.toString(),
                         color: const Color(0xFFF59E0B),
                         bg: const Color(0xFFFFFBEB),
+                        onTap: onGoToPsychologists,
                       )),
                     ]),
                   ]);
@@ -2392,48 +2402,53 @@ class _AdminStatCard extends StatelessWidget {
   final IconData icon;
   final String label, value;
   final Color color, bg;
+  final VoidCallback? onTap;
   const _AdminStatCard({
     required this.icon,
     required this.label,
     required this.value,
     required this.color,
     required this.bg,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 3)),
-        ],
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Container(
-          padding: const EdgeInsets.all(9),
-          decoration:
-              BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
-          child: Icon(icon, color: color, size: 20),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 3)),
+          ],
         ),
-        const SizedBox(height: 10),
-        Text(value,
-            style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
-                color: color)),
-        const SizedBox(height: 2),
-        Text(label,
-            style: const TextStyle(
-                fontSize: 11,
-                color: Color(0xFF8A94A6),
-                fontWeight: FontWeight.w600)),
-      ]),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            padding: const EdgeInsets.all(9),
+            decoration:
+                BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(height: 10),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: color)),
+          const SizedBox(height: 2),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF8A94A6),
+                  fontWeight: FontWeight.w600)),
+        ]),
+      ),
     );
   }
 }
