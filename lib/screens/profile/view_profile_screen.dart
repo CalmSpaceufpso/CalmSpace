@@ -67,9 +67,13 @@ class _OwnProfileView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final inicial = profile.fullName.isNotEmpty ? profile.fullName[0].toUpperCase() : 'U';
-    final isPsi = profile.role == 'Psicólogo';
-    final roleLabel = isPsi ? 'Psicólogo' : 'Paciente';
-    final roleIcon  = isPsi ? Icons.psychology_outlined : Icons.self_improvement_rounded;
+    final isAdmin = profile.role == 'Admin';
+    final isPsi   = profile.role == 'Psicólogo';
+    final roleLabel = isAdmin ? 'Administrador' : isPsi ? 'Psicólogo' : 'Paciente';
+    final roleIcon  = isAdmin ? Icons.admin_panel_settings_rounded
+        : isPsi ? Icons.psychology_outlined
+        : Icons.self_improvement_rounded;
+    final currentUser = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
       backgroundColor: _background,
@@ -203,32 +207,57 @@ class _OwnProfileView extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // ── TARJETAS INFO ──────────────────────────────────
+            // ── INFO DE CUENTA ────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  _InfoCard(
-                    icon: Icons.calendar_today_outlined,
-                    title: 'Próxima Cita',
-                    subtitle: 'Próximamente',
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFEEF3FF), Color(0xFFDBEAFE)],
-                      begin: Alignment.topLeft, end: Alignment.bottomRight,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3)),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    _AccountRow(
+                      icon: Icons.badge_outlined,
+                      label: 'Rol',
+                      value: roleLabel,
+                      iconColor: isAdmin
+                          ? const Color(0xFF0891B2)
+                          : isPsi
+                              ? const Color(0xFF7C3AED)
+                              : _primary,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  _InfoCard(
-                    icon: Icons.psychology_outlined,
-                    title: 'Mi Psicólogo',
-                    subtitle: 'Próximamente',
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFF5F3FF), Color(0xFFEDE9FE)],
-                      begin: Alignment.topLeft, end: Alignment.bottomRight,
+                    const Divider(height: 1, indent: 56, endIndent: 16, color: Color(0xFFF1F5F9)),
+                    _AccountRow(
+                      icon: Icons.email_outlined,
+                      label: 'Email',
+                      value: currentUser?.email ?? '—',
                     ),
-                    iconColor: const Color(0xFF7C3AED),
-                  ),
-                ],
+                    if (profile.phone != null && profile.phone!.isNotEmpty) ...[
+                      const Divider(height: 1, indent: 56, endIndent: 16, color: Color(0xFFF1F5F9)),
+                      _AccountRow(
+                        icon: Icons.phone_iphone_rounded,
+                        label: 'Teléfono',
+                        value: profile.phone!,
+                      ),
+                    ],
+                    if (profile.status.isNotEmpty) ...[
+                      const Divider(height: 1, indent: 56, endIndent: 16, color: Color(0xFFF1F5F9)),
+                      _AccountRow(
+                        icon: Icons.verified_user_outlined,
+                        label: 'Estado',
+                        value: _statusLabel(profile.status),
+                        valueColor: _statusColor(profile.status),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
 
@@ -256,14 +285,15 @@ class _OwnProfileView extends StatelessWidget {
                     icon: Icons.notifications_none_outlined,
                     label: 'Notificaciones',
                   ),
-                  _ActionRow(
-                    icon: Icons.description_outlined,
-                    label: 'Historial de Bienestar',
-                    subtitle: 'Revisa tus registros y progreso',
-                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Próximamente')),
+                  if (!isAdmin)
+                    _ActionRow(
+                      icon: Icons.description_outlined,
+                      label: isPsi ? 'Historial de Citas' : 'Historial de Bienestar',
+                      subtitle: isPsi ? 'Revisa tus citas pasadas' : 'Revisa tus registros y progreso',
+                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Próximamente')),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -900,7 +930,83 @@ class _InfoRow extends StatelessWidget {
 }
 
 
+
 // ── WIDGETS AUXILIARES ────────────────────────────────────────────────────────
+
+// ── Account info row ──────────────────────────────────────────────────────────
+
+class _AccountRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color? iconColor;
+  final Color? valueColor;
+  const _AccountRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.iconColor,
+    this.valueColor,
+  });
+
+  static const Color _primary  = Color(0xFF2B5BFF);
+  static const Color _textSub  = Color(0xFF8A94A6);
+  static const Color _textMain = Color(0xFF0D1B3E);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: (iconColor ?? _primary).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 16, color: iconColor ?? _primary),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 11, color: _textSub, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 2),
+                Text(value,
+                    style: TextStyle(
+                        fontSize: 14,
+                        color: valueColor ?? _textMain,
+                        fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _statusLabel(String status) => switch (status) {
+      'activo'    => 'Activo',
+      'aprobado'  => 'Aprobado',
+      'pendiente' => 'Pendiente',
+      'baneado'   => 'Baneado',
+      'rechazado' => 'Rechazado',
+      _           => status,
+    };
+
+Color _statusColor(String status) => switch (status) {
+      'activo'    => Color(0xFF2B5BFF),
+      'aprobado'  => Color(0xFF2B5BFF),
+      'pendiente' => Color(0xFFF59E0B),
+      'baneado'   => Color(0xFFEF4444),
+      'rechazado' => Color(0xFFEF4444),
+      _           => Color(0xFF8A94A6),
+    };
 
 class _InfoCard extends StatelessWidget {
   final IconData icon;
