@@ -539,16 +539,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     ];
 
     final tabs = isAdmin ? adminTabs : (isPsi ? psiTabs : pacienteTabs);
+    final safeNavIndex = _navIndex >= tabs.length ? 0 : _navIndex;
 
     return Scaffold(
       backgroundColor: _bg,
       bottomNavigationBar: _BottomNav(
-        current: _navIndex,
+        current: safeNavIndex,
         onTap: (i) => setState(() => _navIndex = i),
         isPsychologist: isPsi,
         isAdmin: isAdmin,
       ),
-      body: IndexedStack(index: _navIndex, children: tabs),
+      body: IndexedStack(index: safeNavIndex, children: tabs),
     );
   }
 }
