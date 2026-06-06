@@ -11,9 +11,12 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
-  late Animation<Offset> _slideAnimation;
+  
+  late Animation<double> _logoFadeAnimation;
+  late Animation<double> _logoScaleAnimation;
+  
+  late Animation<double> _textFadeAnimation;
+  late Animation<Offset> _textSlideAnimation;
 
   @override
   void initState() {
@@ -21,28 +24,23 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 1400),
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.2, 0.8, curve: Curves.easeOut),
-      ),
+    // Animación del Logo (arranca al principio)
+    _logoFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.5, curve: Curves.easeOut)),
+    );
+    _logoScaleAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.6, curve: Curves.easeOutBack)),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.2, 0.8, curve: Curves.easeOutBack),
-      ),
+    // Animación del Texto (entra con un ligero retraso)
+    _textFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: const Interval(0.4, 0.9, curve: Curves.easeOut)),
     );
-
-    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.2, 0.8, curve: Curves.easeOutQuart),
-      ),
+    _textSlideAnimation = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+      CurvedAnimation(parent: _controller, curve: const Interval(0.4, 0.9, curve: Curves.easeOutQuart)),
     );
 
     _startAnimation();
@@ -50,7 +48,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   Future<void> _startAnimation() async {
     await _controller.forward();
-    await Future.delayed(const Duration(milliseconds: 800));
+    // Solo una pequeña pausa visual de 200ms en vez de 800ms
+    await Future.delayed(const Duration(milliseconds: 200));
     if (mounted) {
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
@@ -79,39 +78,42 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         child: AnimatedBuilder(
           animation: _controller,
           builder: (context, child) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Transform.scale(
-                  scale: _scaleAnimation.value,
-                  child: child,
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Logo animado
+                FadeTransition(
+                  opacity: _logoFadeAnimation,
+                  child: Transform.scale(
+                    scale: _logoScaleAnimation.value,
+                    child: Image.asset(
+                      'assets/images/splash_logo.png',
+                      width: 140,
+                      height: 140,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 24),
+                // Texto animado
+                FadeTransition(
+                  opacity: _textFadeAnimation,
+                  child: SlideTransition(
+                    position: _textSlideAnimation,
+                    child: const Text(
+                      'CalmSpace',
+                      style: TextStyle(
+                        fontSize: 38,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             );
           },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset(
-                'assets/images/splash_logo.png',
-                width: 140, // Fixed width to prevent it from being massive
-                height: 140,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'CalmSpace',
-                style: TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                  letterSpacing: 1.5,
-                  fontFamily: 'Roboto', // Or standard Flutter font
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
