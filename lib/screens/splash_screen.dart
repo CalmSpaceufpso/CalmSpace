@@ -83,7 +83,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             'assets/images/splash_logo.png',
             width: double.infinity,
             height: double.infinity,
-            fit: BoxFit.cover, // The image is tall, we cover the screen
+            fit: BoxFit.contain, // Allow the image to fit entirely on the screen without cropping
           ),
         ),
       ),
