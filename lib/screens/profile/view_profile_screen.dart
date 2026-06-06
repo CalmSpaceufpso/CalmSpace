@@ -307,9 +307,11 @@ class _PublicPsychologistView extends StatefulWidget {
 }
 
 class _PublicPsychologistViewState extends State<_PublicPsychologistView> {
-  static const Color _primary    = Color(0xFF2563EB);
-  static const Color _background = Color(0xFFF0F2F5);
-  static const Color _textMain   = Color(0xFF111827);
+  static const Color _primary    = Color(0xFF2B5BFF);
+  static const Color _primaryDark = Color(0xFF1A3FCC);
+  static const Color _background = Color(0xFFF4F6FB);
+  static const Color _textMain   = Color(0xFF0D1B3E);
+  static const Color _textSub    = Color(0xFF8A94A6);
 
   List<ScheduleSlot> _slots = [];
   bool _loadingSlots = true;
@@ -339,8 +341,7 @@ class _PublicPsychologistViewState extends State<_PublicPsychologistView> {
                   endTime: s['endTime'] as String,
                 ))
             .toList();
-        // Ordena por día de la semana
-        const dayOrder = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+        const dayOrder = ['Lunes','Martes','Miércoles','Miercoles','Jueves','Viernes','Sábado','Domingo'];
         loaded.sort((a, b) =>
             dayOrder.indexOf(a.day).compareTo(dayOrder.indexOf(b.day)));
         if (mounted) setState(() => _slots = loaded);
@@ -354,7 +355,6 @@ class _PublicPsychologistViewState extends State<_PublicPsychologistView> {
     final profile = widget.profile;
     final inicial = profile.fullName.isNotEmpty ? profile.fullName[0].toUpperCase() : 'P';
 
-    // Agrupa slots por día
     final Map<String, List<ScheduleSlot>> byDay = {};
     for (final s in _slots) {
       byDay.putIfAbsent(s.day, () => []).add(s);
@@ -362,21 +362,38 @@ class _PublicPsychologistViewState extends State<_PublicPsychologistView> {
 
     return Scaffold(
       backgroundColor: _background,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: _background,
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: Container(
-          margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-              color: Colors.white, borderRadius: BorderRadius.circular(12)),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, size: 16, color: _textMain),
-            onPressed: () => Navigator.pop(context),
+        leading: Padding(
+          padding: const EdgeInsets.all(8),
+          child: GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.25),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withOpacity(0.3)),
+              ),
+              child: const Icon(Icons.arrow_back_ios_new_rounded,
+                  size: 16, color: Colors.white),
+            ),
           ),
         ),
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 16,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
         child: SizedBox(
           height: 54,
           child: ElevatedButton(
@@ -386,146 +403,498 @@ class _PublicPsychologistViewState extends State<_PublicPsychologistView> {
             style: ElevatedButton.styleFrom(
               backgroundColor: _primary,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
-            child: const Text('Agendar Cita',
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.calendar_today_rounded, color: Colors.white, size: 18),
+                SizedBox(width: 10),
+                Text('Agendar Cita',
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              ],
+            ),
           ),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // AVATAR
-            Center(
-              child: CircleAvatar(
-                radius: 70,
-                backgroundColor: _primary,
-                backgroundImage: profile.photoUrl != null && profile.photoUrl!.isNotEmpty
-                    ? (profile.photoUrl!.startsWith('http')
-                        ? NetworkImage(profile.photoUrl!)
-                        : MemoryImage(base64Decode(profile.photoUrl!.split(',').last)) as ImageProvider)
-                    : null,
-                child: (profile.photoUrl == null || profile.photoUrl!.isEmpty)
-                    ? Text(inicial, style: const TextStyle(fontSize: 56, color: Colors.white, fontWeight: FontWeight.bold))
-                    : null,
+            // ── HERO HEADER ──────────────────────────────────────
+            Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF1A3FCC), Color(0xFF2B5BFF), Color(0xFF5E81FF)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      // Avatar con doble anillo
+                      Stack(
+                        alignment: Alignment.bottomRight,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withOpacity(0.25),
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white,
+                              ),
+                              child: CircleAvatar(
+                                radius: 52,
+                                backgroundColor: const Color(0xFF1A3FCC),
+                                backgroundImage: profile.photoUrl != null && profile.photoUrl!.isNotEmpty
+                                    ? (profile.photoUrl!.startsWith('http')
+                                        ? NetworkImage(profile.photoUrl!)
+                                        : MemoryImage(base64Decode(profile.photoUrl!.split(',').last)) as ImageProvider)
+                                    : null,
+                                child: (profile.photoUrl == null || profile.photoUrl!.isEmpty)
+                                    ? Text(inicial, style: const TextStyle(fontSize: 44, color: Colors.white, fontWeight: FontWeight.bold))
+                                    : null,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF10B981),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.verified_rounded, color: Colors.white, size: 14),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // Nombre
+                      Text(
+                        profile.fullName.isNotEmpty ? profile.fullName : 'Psicólogo',
+                        style: const TextStyle(
+                            fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 6),
+                      // Especialidad
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white.withOpacity(0.3)),
+                        ),
+                        child: Text(
+                          profile.specialty ?? 'Psicólogo',
+                          style: const TextStyle(
+                              fontSize: 13, color: Colors.white, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      // Stats row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (profile.experienceYears != null) ...[
+                            _HeroStat(
+                              value: '${profile.experienceYears}',
+                              label: 'Años exp.',
+                              icon: Icons.workspace_premium_rounded,
+                            ),
+                            const _HeroDivider(),
+                          ],
+                          if (profile.modality != null) ...[
+                            _HeroStat(
+                              value: profile.modality!.contains('Online') ? 'Online' : 'Presencial',
+                              label: 'Modalidad',
+                              icon: Icons.video_call_rounded,
+                            ),
+                          ],
+                          if (profile.pricePerSession != null) ...[
+                            const _HeroDivider(),
+                            _HeroStat(
+                              value: '\$${(profile.pricePerSession! / 1000).toStringAsFixed(0)}k',
+                              label: 'Por sesión',
+                              icon: Icons.attach_money_rounded,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 16),
 
-            // NOMBRE + ESPECIALIDAD
-            Center(
-              child: Column(children: [
-                Text(profile.fullName,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _textMain)),
-                const SizedBox(height: 4),
-                Text(profile.specialty ?? 'Psicólogo',
-                    style: const TextStyle(fontSize: 15, color: _primary, fontWeight: FontWeight.w500)),
-              ]),
-            ),
-            const SizedBox(height: 16),
-
-            // BADGES
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              if (profile.experienceYears != null)
-                _Badge(icon: Icons.shield_outlined,
-                    label: '${profile.experienceYears} años experiencia'),
-              if (profile.experienceYears != null && profile.modality != null)
-                const SizedBox(width: 12),
-              if (profile.modality != null)
-                _Badge(icon: Icons.location_on_outlined,
-                    label: 'Modalidad ${profile.modality}'),
-            ]),
-            const SizedBox(height: 28),
-
-            // SOBRE MÍ
-            if (profile.description != null && profile.description!.isNotEmpty) ...[
-              const Text('Sobre mí',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textMain)),
-              const SizedBox(height: 10),
-              Text(profile.description!,
-                  style: const TextStyle(fontSize: 14, color: Color(0xFF4A4A6A), height: 1.6)),
-              const SizedBox(height: 28),
-            ],
-
-            // ── DISPONIBILIDAD HORARIA — desde Firestore ──────────────────
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              const Text('Disponibilidad',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textMain)),
-              if (_loadingSlots)
-                const SizedBox(width: 18, height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: _primary)),
-            ]),
-            const SizedBox(height: 12),
-
-            if (_loadingSlots)
-              const SizedBox()
-            else if (_slots.isEmpty)
-              // Estado vacío
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Colors.grey.shade200)),
-                child: Column(children: const [
-                  Icon(Icons.calendar_today_outlined,
-                      color: Color(0xFFCBD5E1), size: 40),
-                  SizedBox(height: 12),
-                  Text('Este psicólogo aún no ha\nconfigurado su disponibilidad',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Color(0xFF8A94A6), fontSize: 13)),
-                ]),
-              )
-            else
-              // Tarjetas de disponibilidad por día
-              ...byDay.entries.map((entry) => Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 8, offset: const Offset(0, 2))]),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  // Etiqueta del día
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(20)),
-                    child: Text(entry.key,
-                        style: const TextStyle(
-                            color: _primary, fontSize: 12, fontWeight: FontWeight.w700)),
+            // ── CUERPO ───────────────────────────────────────────
+            Transform.translate(
+              offset: const Offset(0, -20),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF4F6FB),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
                   ),
-                  const SizedBox(height: 10),
-                  // Chips de horario
-                  Wrap(spacing: 8, runSpacing: 8,
-                    children: entry.value.map((slot) => Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0F4FF),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: _primary.withValues(alpha: 0.2))),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        const Icon(Icons.access_time, size: 14, color: _primary),
-                        const SizedBox(width: 5),
-                        Text(slot.label,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── SOBRE MÍ ───────────────────────────────────────────
+                      if (profile.description != null && profile.description!.isNotEmpty) ...[
+                        _SectionHeader(icon: Icons.person_outline_rounded, title: 'Sobre mí'),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            profile.description!,
                             style: const TextStyle(
-                                fontSize: 13, color: _textMain, fontWeight: FontWeight.w500)),
-                      ]),
-                    )).toList()),
-                ]),
-              )),
+                              fontSize: 14,
+                              color: Color(0xFF4A5568),
+                              height: 1.7,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
 
-            const SizedBox(height: 100),
+                      // ── INFORMACIÓN PROFESIONAL ────────────────────────────
+                      _SectionHeader(icon: Icons.badge_outlined, title: 'Información profesional'),
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            if (profile.specialty != null)
+                              _InfoRow(
+                                icon: Icons.psychology_rounded,
+                                label: 'Especialidad',
+                                value: profile.specialty!,
+                              ),
+                            if (profile.modality != null) ...[
+                              const Divider(height: 20, color: Color(0xFFF1F5F9)),
+                              _InfoRow(
+                                icon: Icons.videocam_outlined,
+                                label: 'Modalidad',
+                                value: profile.modality!,
+                              ),
+                            ],
+                            if (profile.experienceYears != null) ...[
+                              const Divider(height: 20, color: Color(0xFFF1F5F9)),
+                              _InfoRow(
+                                icon: Icons.workspace_premium_rounded,
+                                label: 'Experiencia',
+                                value: '${profile.experienceYears} años',
+                              ),
+                            ],
+                            if (profile.pricePerSession != null) ...[
+                              const Divider(height: 20, color: Color(0xFFF1F5F9)),
+                              _InfoRow(
+                                icon: Icons.attach_money_rounded,
+                                label: 'Precio/sesión',
+                                value: '\$${profile.pricePerSession!.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}',
+                              ),
+                            ],
+                            if (profile.contactPhone != null) ...[
+                              const Divider(height: 20, color: Color(0xFFF1F5F9)),
+                              _InfoRow(
+                                icon: Icons.phone_iphone_rounded,
+                                label: 'Teléfono',
+                                value: profile.contactPhone!,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // ── DISPONIBILIDAD ─────────────────────────────────────
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _SectionHeader(icon: Icons.schedule_rounded, title: 'Disponibilidad'),
+                          if (_loadingSlots)
+                            const SizedBox(
+                              width: 18, height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: _primary),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      if (_loadingSlots)
+                        const SizedBox(height: 80)
+                      else if (_slots.isEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEEF2FF),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.event_busy_rounded,
+                                    color: _primary, size: 32),
+                              ),
+                              const SizedBox(height: 14),
+                              const Text(
+                                'Sin disponibilidad configurada',
+                                style: TextStyle(
+                                  color: _textMain, fontWeight: FontWeight.w700, fontSize: 14),
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Este psicólogo aún no ha publicado\nsu horario de atención.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: _textSub, fontSize: 12, height: 1.5),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        ...byDay.entries.map((entry) => Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(7),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEEF2FF),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Icon(Icons.today_rounded,
+                                        color: _primary, size: 14),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    entry.key,
+                                    style: const TextStyle(
+                                      color: _textMain,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: entry.value.map((slot) => Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEEF2FF),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: _primary.withOpacity(0.2)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.access_time_rounded, size: 14, color: _primary),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        slot.label,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: _primary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )).toList(),
+                              ),
+                            ],
+                          ),
+                        )),
+
+                      const SizedBox(height: 120),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Hero stat widget ──────────────────────────────────────────────────────────
+
+class _HeroStat extends StatelessWidget {
+  final String value;
+  final String label;
+  final IconData icon;
+  const _HeroStat({required this.value, required this.label, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, color: Colors.white70, size: 16),
+        const SizedBox(height: 4),
+        Text(value,
+            style: const TextStyle(
+                fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white)),
+        Text(label,
+            style: const TextStyle(fontSize: 10, color: Colors.white70, fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+}
+
+class _HeroDivider extends StatelessWidget {
+  const _HeroDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      height: 36,
+      width: 1,
+      color: Colors.white.withOpacity(0.3),
+    );
+  }
+}
+
+// ── Section header ────────────────────────────────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  const _SectionHeader({required this.icon, required this.title});
+
+  static const Color _primary  = Color(0xFF2B5BFF);
+  static const Color _textMain = Color(0xFF0D1B3E);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(7),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEEF2FF),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: _primary, size: 16),
+        ),
+        const SizedBox(width: 10),
+        Text(title,
+            style: const TextStyle(
+                fontSize: 16, fontWeight: FontWeight.w800, color: _textMain)),
+      ],
+    );
+  }
+}
+
+// ── Info row ──────────────────────────────────────────────────────────────────
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _InfoRow({required this.icon, required this.label, required this.value});
+
+  static const Color _primary = Color(0xFF2B5BFF);
+  static const Color _textSub = Color(0xFF8A94A6);
+  static const Color _textMain = Color(0xFF0D1B3E);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(7),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEEF2FF),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: _primary, size: 16),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: const TextStyle(fontSize: 11, color: _textSub, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 2),
+              Text(value,
+                  style: const TextStyle(
+                      fontSize: 14, color: _textMain, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
