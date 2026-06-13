@@ -35,11 +35,11 @@ class _HomeScreenState extends State<HomeScreen>
   late final Animation<double>   _pulseAnim;
 
   final List<Map<String, dynamic>> _moods = [
-    {'emoji': '😔', 'label': 'Mal'},
-    {'emoji': '😐', 'label': 'Regular'},
-    {'emoji': '🙂', 'label': 'Bien'},
-    {'emoji': '😊', 'label': 'Muy bien'},
-    {'emoji': '😄', 'label': 'Genial'},
+    {'icon': Icons.sentiment_very_dissatisfied_rounded, 'label': 'Muy mal'},
+    {'icon': Icons.sentiment_dissatisfied_rounded, 'label': 'Mal'},
+    {'icon': Icons.sentiment_neutral_rounded, 'label': 'Más o menos'},
+    {'icon': Icons.sentiment_satisfied_rounded, 'label': 'Bien'},
+    {'icon': Icons.sentiment_very_satisfied_rounded, 'label': 'Excelente'},
   ];
 
   static const List<String> _quotes = [
@@ -106,7 +106,7 @@ class _HomeScreenState extends State<HomeScreen>
     final esPsicologo = _role == 'Psicólogo';
 
     return Scaffold(
-      backgroundColor: _beige,
+      backgroundColor: const Color(0xFFF8F9FA), // Fondo claro del mockup
       body: IndexedStack(
         index: _navIndex,
         children: [
@@ -141,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen>
           padding: const EdgeInsets.symmetric(horizontal: 20),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               _buildMoodCard(),
               const SizedBox(height: 28),
               _sectionTitle('Herramientas'),
@@ -165,143 +165,66 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildHeader(String nombre, String initial, bool esPsicologo) {
     return Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [_verdeDark, _verde],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+        color: Color(0xFFF8F9FA),
       ),
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+          padding: const EdgeInsets.fromLTRB(24, 40, 24, 10),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Hola, ${nombre.split(' ').first} 👋',
+                      '¡Hola, ${nombre.split(' ').first}! 👋',
                       style: GoogleFonts.outfit(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF0D1B3E),
+                        letterSpacing: -0.5,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       esPsicologo
                           ? 'Panel del psicólogo'
-                          : '¿Cómo te sientes hoy?',
+                          : 'Que tengas un día lleno de bienestar.',
                       style: GoogleFonts.outfit(
                         fontSize: 14,
-                        color: Colors.white70,
+                        color: const Color(0xFF8A94A6),
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    if (!_loadingRole) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _role,
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
-              // Logout + Avatar
-              Row(
-                children: [
-                  // Botón cerrar sesión
-                  GestureDetector(
-                    onTap: () async {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20)),
-                          title: Text('Cerrar sesión',
-                              style: GoogleFonts.outfit(
-                                  fontWeight: FontWeight.bold)),
-                          content: Text(
-                            '¿Estás seguro que deseas cerrar sesión?',
-                            style: GoogleFonts.outfit(fontSize: 14),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, false),
-                              child: Text('Cancelar',
-                                  style: GoogleFonts.outfit(color: _textMid)),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, true),
-                              child: Text('Salir',
-                                  style: GoogleFonts.outfit(
-                                      color: Colors.redAccent,
-                                      fontWeight: FontWeight.bold)),
-                            ),
-                          ],
-                        ),
-                      );
-                      if (confirm == true) {
-                        await FirebaseAuth.instance.signOut();
-                      }
-                    },
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      margin: const EdgeInsets.only(right: 10),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white.withOpacity(0.15),
-                      ),
-                      child: const Icon(
-                        Icons.power_settings_new_rounded,
-                        color: Colors.white70,
-                        size: 20,
-                      ),
+              // Avatar
+              GestureDetector(
+                onTap: () => setState(() => _navIndex = 3),
+                child: ScaleTransition(
+                  scale: _pulseAnim,
+                  child: Container(
+                    width: 50,
+                    height: 50,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0xFF3B5BFE),
                     ),
-                  ),
-                  // Avatar
-                  GestureDetector(
-                    onTap: () => setState(() => _navIndex = 3),
-                    child: ScaleTransition(
-                      scale: _pulseAnim,
-                      child: Container(
-                        width: 54,
-                        height: 54,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.25),
-                          border: Border.all(color: Colors.white60, width: 2),
-                        ),
-                        child: Center(
-                          child: Text(
-                            initial,
-                            style: GoogleFonts.outfit(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+                    child: Center(
+                      child: Text(
+                        initial,
+                        style: GoogleFonts.outfit(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
             ],
           ),
@@ -315,125 +238,228 @@ class _HomeScreenState extends State<HomeScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(24),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: _verde.withOpacity(0.12),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // CABECERA
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: _verde.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFF3B5BFE),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(Icons.favorite_rounded,
-                    color: _verde, size: 18),
+                child: const Icon(Icons.favorite_rounded, color: Colors.white, size: 20),
               ),
-              const SizedBox(width: 10),
-              Text(
-                'Estado de ánimo',
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: _textDark,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '¿Cómo te sientes hoy?',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF0D1B3E),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Registra tu estado de ánimo',
+                      style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF8A94A6)),
+                    ),
+                  ],
                 ),
               ),
-              const Spacer(),
-              if (_selectedMood >= 0)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _verde.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '✓ Registrado',
-                    style: GoogleFonts.outfit(
-                        fontSize: 11,
-                        color: _verde,
-                        fontWeight: FontWeight.w600),
-                  ),
+              // Botón Historial
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0F2FF),
+                  borderRadius: BorderRadius.circular(20),
                 ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.bar_chart_rounded, color: Color(0xFF3B5BFE), size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Historial',
+                      style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF3B5BFE)),
+                    ),
+                  ],
+                ),
+              )
             ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Toca cómo te sientes ahora',
-            style: GoogleFonts.outfit(fontSize: 13, color: _textMid),
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
+
+          // SELECTOR DE EMOCIONES
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(_moods.length, (i) {
               final selected = _selectedMood == i;
+              final colorInfo = _getMoodColorInfo(i);
+              
               return GestureDetector(
                 onTap: () {
                   setState(() => _selectedMood = i);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(
-                          '${_moods[i]['emoji']} ${_moods[i]['label']} registrado'),
-                      backgroundColor: _verde,
+                      content: Text('${_moods[i]['label']} registrado'),
+                      backgroundColor: colorInfo.main,
                       behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       duration: const Duration(seconds: 2),
                     ),
                   );
                 },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOut,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? _verde.withOpacity(0.15)
-                        : Colors.grey.withOpacity(0.06),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: selected ? _verde : Colors.transparent,
-                      width: 2,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        _moods[i]['emoji'] as String,
-                        style: TextStyle(
-                            fontSize: selected ? 26 : 22),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOut,
+                      width: MediaQuery.of(context).size.width * 0.155,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        color: selected ? Colors.white : colorInfo.bg,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: selected ? const Color(0xFF22C55E) : Colors.transparent,
+                          width: 2,
+                        ),
+                        boxShadow: selected ? [
+                          BoxShadow(color: const Color(0xFF22C55E).withOpacity(0.2), blurRadius: 12, offset: const Offset(0, 4))
+                        ] : [],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _moods[i]['label'] as String,
-                        style: GoogleFonts.outfit(
-                          fontSize: 9,
-                          color: selected ? _verde : _textMid,
-                          fontWeight: selected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 40, height: 40,
+                            decoration: BoxDecoration(
+                              color: selected ? colorInfo.bg : Colors.white.withOpacity(0.5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Icon(
+                                _moods[i]['icon'] as IconData,
+                                color: colorInfo.main,
+                                size: 24,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _moods[i]['label'] as String,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(
+                              fontSize: 10,
+                              color: selected ? const Color(0xFF22C55E) : const Color(0xFF6B7280),
+                              fontWeight: selected ? FontWeight.bold : FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (selected)
+                      Positioned(
+                        top: -6,
+                        right: -6,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(color: Color(0xFF22C55E), shape: BoxShape.circle),
+                          child: const Icon(Icons.check_rounded, color: Colors.white, size: 10),
                         ),
                       ),
-                    ],
-                  ),
+                  ],
                 ),
               );
             }),
           ),
+          
+          const SizedBox(height: 24),
+          
+          // BANNER MOTIVACIONAL INTERNO
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4), // Verde muy claro
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Text('¡Vas en crecimiento!', style: TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.w800, fontSize: 13)),
+                          SizedBox(width: 4),
+                          Text('🌱', style: TextStyle(fontSize: 12)),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      const Text('Tu bienestar ha mejorado 12%\nrespecto a la semana pasada.', style: TextStyle(color: Color(0xFF6B7280), fontSize: 11, height: 1.3)),
+                    ],
+                  ),
+                ),
+                // Gráfica mock (línea simple)
+                SizedBox(
+                  width: 60, height: 30,
+                  child: CustomPaint(painter: _MiniTrendLinePainter()),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(12)),
+                  child: const Text('+12%', style: TextStyle(color: Color(0xFF15803D), fontWeight: FontWeight.w800, fontSize: 11)),
+                )
+              ],
+            ),
+          ),
+          
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Divider(color: Color(0xFFF0F2F5), thickness: 1),
+          ),
+          
+          // RECORDATORIO
+          Row(
+            children: [
+              const Icon(Icons.notifications_none_rounded, color: Color(0xFF8A94A6), size: 18),
+              const SizedBox(width: 8),
+              Text('Recordatorio diario: 20:00', style: GoogleFonts.outfit(color: const Color(0xFF6B7280), fontSize: 13, fontWeight: FontWeight.w500)),
+              const Spacer(),
+              Text('Editar >', style: GoogleFonts.outfit(color: const Color(0xFF3B5BFE), fontSize: 13, fontWeight: FontWeight.bold)),
+            ],
+          )
         ],
       ),
     );
+  }
+
+  _ColorInfo _getMoodColorInfo(int index) {
+    switch (index) {
+      case 0: return _ColorInfo(const Color(0xFFEF4444), const Color(0xFFFEF2F2)); // Muy mal
+      case 1: return _ColorInfo(const Color(0xFFF97316), const Color(0xFFFFF7ED)); // Mal
+      case 2: return _ColorInfo(const Color(0xFFF59E0B), const Color(0xFFFFFBEB)); // Más o menos
+      case 3: return _ColorInfo(const Color(0xFF22C55E), const Color(0xFFF0FDF4)); // Bien
+      case 4: return _ColorInfo(const Color(0xFF3B5BFE), const Color(0xFFEEF2FF)); // Excelente
+      default: return _ColorInfo(Colors.grey, Colors.grey.shade100);
+    }
   }
 
   // ── HERRAMIENTAS ─────────────────────────────────────────────────────────────
@@ -860,4 +886,35 @@ class _NavItem extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ColorInfo {
+  final Color main;
+  final Color bg;
+  _ColorInfo(this.main, this.bg);
+}
+
+class _MiniTrendLinePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF22C55E)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final path = Path();
+    path.moveTo(0, size.height);
+    path.lineTo(size.width * 0.3, size.height * 0.6);
+    path.lineTo(size.width * 0.6, size.height * 0.8);
+    path.lineTo(size.width, 0);
+
+    canvas.drawPath(path, paint);
+
+    // Dibuja el pequeño círculo al final
+    canvas.drawCircle(Offset(size.width, 0), 3, paint..style = PaintingStyle.fill);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

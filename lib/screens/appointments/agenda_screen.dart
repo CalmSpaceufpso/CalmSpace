@@ -215,7 +215,7 @@ class _AgendaScreenState extends State<AgendaScreen>
     return ListView.separated(
       padding: const EdgeInsets.all(20),
       itemCount: docs.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 16),
+      separatorBuilder: (_, _) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
         final doc = docs[index];
         final d = doc.data() as Map<String, dynamic>;
@@ -572,8 +572,9 @@ class _PsychologistAppointmentCardState
                       icon: const Icon(Icons.arrow_drop_down_rounded, size: 16, color: _textSub),
                       tooltip: 'Editar estado',
                       onSelected: (val) {
-                        if (val == 'scheduled') _updateStatus('scheduled', 'Estado revertido a Pendiente');
-                        else if (val == 'completed') _updateStatus('completed', 'Cita marcada como completada');
+                        if (val == 'scheduled') {
+                          _updateStatus('scheduled', 'Estado revertido a Pendiente');
+                        } else if (val == 'completed') _updateStatus('completed', 'Cita marcada como completada');
                         else if (val == 'no_show') _updateStatus('no_show', 'Marcado como No Asistió');
                       },
                       itemBuilder: (context) => [

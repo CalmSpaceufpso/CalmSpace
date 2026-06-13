@@ -106,7 +106,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Image.network(
                     'https://i.postimg.cc/sgPdPjqB/LOGO-AZUL.png',
                     height: 60, fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) =>
+                    errorBuilder: (_, _, _) =>
                       const Icon(Icons.spa_rounded, color: _primary, size: 52)),
                   const SizedBox(height: 12),
                   const Text('Crear cuenta', style: TextStyle(

@@ -87,7 +87,7 @@ class PsychologistDetailScreen extends StatelessWidget {
                     ? ClipOval(
                         child: Image.network(psychologist.photoUrl!,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
+                            errorBuilder: (_, _, _) =>
                                 _initialsText(inicial)))
                     : _initialsText(inicial),
               ),

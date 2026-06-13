@@ -207,9 +207,13 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
     setState(() {
       _errorMessage = null;
       if (allSelected) {
-        for (final s in daySlots) _selectedSlotIds.remove(s.id);
+        for (final s in daySlots) {
+          _selectedSlotIds.remove(s.id);
+        }
       } else {
-        for (final s in daySlots) _selectedSlotIds.add(s.id);
+        for (final s in daySlots) {
+          _selectedSlotIds.add(s.id);
+        }
       }
     });
   }

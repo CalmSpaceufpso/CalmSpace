@@ -58,8 +58,9 @@ class MicroInterventionService {
       // Convertimos 'Mañana' -> '09:00', 'Tarde' -> '14:00', 'Noche' -> '20:00'
       List<String> times = [];
       for (String pref in profile.preferredInterventionTimes) {
-        if (pref == 'Mañana') times.add('09:00');
-        else if (pref == 'Tarde') times.add('14:00');
+        if (pref == 'Mañana') {
+          times.add('09:00');
+        } else if (pref == 'Tarde') times.add('14:00');
         else if (pref == 'Noche') times.add('20:00');
       }
 

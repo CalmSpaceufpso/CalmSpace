@@ -161,7 +161,7 @@ class PsychologistCard extends StatelessWidget {
               child: Image.network(
                 psychologist.photoUrl!,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _initialsWidget(initials),
+                errorBuilder: (_, _, _) => _initialsWidget(initials),
               ),
             )
           : _initialsWidget(initials),

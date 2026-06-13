@@ -48,7 +48,7 @@ class PsychologistApprovalScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 6,
                 offset: const Offset(0, 2)),
           ],
@@ -128,12 +128,6 @@ class _PsychologistList extends StatelessWidget {
   final String statusFilter;
   const _PsychologistList({required this.statusFilter});
 
-  static const Color _pending  = Color(0xFFF59E0B);
-  static const Color _approved = Color(0xFF2B5BFF);
-  static const Color _rejected = Color(0xFFEF4444);
-  static const Color _bg       = Color(0xFFF4F6FB);
-  static const Color _textSub  = Color(0xFF8A94A6);
-
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
@@ -176,7 +170,7 @@ class _PsychologistList extends StatelessWidget {
         return ListView.separated(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           itemCount: psychologists.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          separatorBuilder: (_, _) => const SizedBox(height: 12),
           itemBuilder: (_, i) => _PsychologistCard(
             psychologist: psychologists[i],
             statusFilter: statusFilter,
@@ -215,7 +209,7 @@ class _EmptyState extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
+                    color: Colors.black.withValues(alpha: 0.06),
                     blurRadius: 20,
                     offset: const Offset(0, 4)),
               ],
@@ -330,8 +324,8 @@ class _PsychologistCardState extends State<_PsychologistCard> {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: isApprove
-                  ? _approved.withOpacity(0.12)
-                  : _rejected.withOpacity(0.12),
+                  ? _approved.withValues(alpha: 0.12)
+                  : _rejected.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -431,13 +425,13 @@ class _PsychologistCardState extends State<_PsychologistCard> {
                 : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: isRejected
-            ? Border.all(color: _rejected.withOpacity(0.3))
+            ? Border.all(color: _rejected.withValues(alpha: 0.3))
             : isApproved
-                ? Border.all(color: _approved.withOpacity(0.3))
+                ? Border.all(color: _approved.withValues(alpha: 0.3))
                 : null,
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 12,
               offset: const Offset(0, 4)),
         ],
@@ -450,7 +444,7 @@ class _PsychologistCardState extends State<_PsychologistCard> {
             // Avatar
             CircleAvatar(
               radius: 26,
-              backgroundColor: _primary.withOpacity(0.12),
+              backgroundColor: _primary.withValues(alpha: 0.12),
               backgroundImage: psy.photoUrl != null && psy.photoUrl!.isNotEmpty
                   ? (psy.photoUrl!.startsWith('http')
                       ? NetworkImage(psy.photoUrl!) as ImageProvider
@@ -495,7 +489,7 @@ class _PsychologistCardState extends State<_PsychologistCard> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: _statusColor(widget.statusFilter).withOpacity(0.12),
+                color: _statusColor(widget.statusFilter).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -569,10 +563,10 @@ class _PsychologistCardState extends State<_PsychologistCard> {
                           child: Container(
                             height: 42,
                             decoration: BoxDecoration(
-                              color: _rejected.withOpacity(0.08),
+                              color: _rejected.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                  color: _rejected.withOpacity(0.3)),
+                                  color: _rejected.withValues(alpha: 0.3)),
                             ),
                             child: const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -603,13 +597,13 @@ class _PsychologistCardState extends State<_PsychologistCard> {
                             gradient: LinearGradient(
                               colors: [
                                 _approved,
-                                _approved.withOpacity(0.8)
+                                _approved.withValues(alpha: 0.8)
                               ],
                             ),
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                  color: _approved.withOpacity(0.3),
+                                  color: _approved.withValues(alpha: 0.3),
                                   blurRadius: 8,
                                   offset: const Offset(0, 3))
                             ],
@@ -645,9 +639,9 @@ class _PsychologistCardState extends State<_PsychologistCard> {
               child: Container(
                 height: 38,
                 decoration: BoxDecoration(
-                  color: _rejected.withOpacity(0.06),
+                  color: _rejected.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _rejected.withOpacity(0.25)),
+                  border: Border.all(color: _rejected.withValues(alpha: 0.25)),
                 ),
                 child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,

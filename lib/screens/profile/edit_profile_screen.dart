@@ -22,6 +22,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   static const Color _textSub = Color(0xFF9E9E9E);
 
   bool _isLoading = true;
+  bool _isEditing = false;
   bool _isSaving = false;
   String _role = 'Paciente';
   String? _photoUrl;
@@ -134,7 +135,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           .set(profileData, SetOptions(merge: true));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Perfil guardado'), backgroundColor: Color(0xFF6BAE8E)),
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.check_circle_outline, color: Colors.white),
+              SizedBox(width: 12),
+              Text(
+                'Perfil guardado exitosamente',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.white),
+              ),
+            ],
+          ),
+          backgroundColor: _primary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          margin: const EdgeInsets.only(bottom: 90, left: 20, right: 20),
+          elevation: 8,
+          duration: const Duration(seconds: 3),
+        ),
       );
       Navigator.pop(context, true);
     } catch (e) {
@@ -215,28 +233,34 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           icon: const Icon(Icons.close, color: _textMain),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Editar Perfil',
-          style: TextStyle(color: _textMain, fontWeight: FontWeight.bold, fontSize: 17),
+        title: Text(
+          _isEditing ? 'Editar Perfil' : 'Datos de la cuenta',
+          style: const TextStyle(color: _textMain, fontWeight: FontWeight.bold, fontSize: 17),
         ),
         centerTitle: true,
         actions: [
-          TextButton(
-            onPressed: _isSaving ? null : _save,
-            child: _isSaving
-                ? const SizedBox(
-                    width: 18, height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: _primary),
-                  )
-                : const Text(
-                    'Guardar',
-                    style: TextStyle(
-                      color: _primary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+          if (!_isEditing)
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, color: _primary),
+              onPressed: () => setState(() => _isEditing = true),
+            )
+          else
+            TextButton(
+              onPressed: _isSaving ? null : _save,
+              child: _isSaving
+                  ? const SizedBox(
+                      width: 18, height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: _primary),
+                    )
+                  : const Text(
+                      'Guardar',
+                      style: TextStyle(
+                        color: _primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
-                  ),
-          ),
+            ),
         ],
       ),
       body: Form(
@@ -248,7 +272,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               // ── AVATAR ──────────────────────────────────────
               const SizedBox(height: 12),
               GestureDetector(
-                onTap: _pickImage,
+                onTap: _isEditing ? _pickImage : null,
                 child: Stack(
                   children: [
                     CircleAvatar(
@@ -268,17 +292,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             )
                           : null,
                     ),
-                    Positioned(
-                      bottom: 0, right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: _primary,
-                          shape: BoxShape.circle,
+                    if (_isEditing)
+                      Positioned(
+                        bottom: 0, right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: _primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
                         ),
-                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -288,6 +313,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               _CardField(
                 label: 'Nombre completo',
                 controller: _nameCtrl,
+                readOnly: !_isEditing,
                 validator: (v) => v!.isEmpty ? 'Requerido' : null,
               ),
 
@@ -300,6 +326,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 _CardField(
                   label: 'Teléfono',
                   controller: _phoneCtrl,
+                  readOnly: !_isEditing,
                   keyboardType: TextInputType.phone,
                   hint: '(55) 1234 5678',
                 ),
@@ -309,7 +336,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   readOnly: true,
                   hint: 'DD / MM / AAAA',
                   suffixIcon: const Icon(Icons.calendar_today_outlined, color: _textSub, size: 20),
-                  onTap: _pickDate,
+                  onTap: _isEditing ? _pickDate : null,
                 ),
               ],
 
@@ -319,12 +346,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   label: 'Especialidad *',
                   value: _specialtyCtrl.text.isEmpty ? null : _specialtyCtrl.text,
                   items: _specialties,
-                  onChanged: (v) => setState(() => _specialtyCtrl.text = v ?? ''),
+                  onChanged: _isEditing ? (v) => setState(() => _specialtyCtrl.text = v ?? '') : null,
                   validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null,
                 ),
                 _CardField(
                   label: 'Años de experiencia',
                   controller: _yearsCtrl,
+                  readOnly: !_isEditing,
                   keyboardType: TextInputType.number,
                   validator: (v) {
                     if (v!.isEmpty) return 'Requerido';
@@ -335,6 +363,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 _CardField(
                   label: 'Cuéntanos sobre tu enfoque profesional...',
                   controller: _descCtrl,
+                  readOnly: !_isEditing,
                   maxLines: 4,
                   maxLength: 500,
                   validator: (v) => v!.isEmpty ? 'Requerido' : null,
@@ -342,6 +371,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 _CardField(
                   label: 'Precio por sesión (COP)',
                   controller: _priceCtrl,
+                  readOnly: !_isEditing,
                   keyboardType: TextInputType.number,
                   hint: 'Ej. 50000',
                   validator: (v) {
@@ -464,14 +494,14 @@ class _DropdownField extends StatelessWidget {
   final String label;
   final String? value;
   final List<String> items;
-  final ValueChanged<String?> onChanged;
+  final ValueChanged<String?>? onChanged;
   final String? Function(String?)? validator;
 
   const _DropdownField({
     required this.label,
     required this.value,
     required this.items,
-    required this.onChanged,
+    this.onChanged,
     this.validator,
   });
 
@@ -488,11 +518,11 @@ class _DropdownField extends StatelessWidget {
         ],
       ),
       child: DropdownButtonFormField<String>(
-        value: value,
+        initialValue: value,
         isExpanded: true,
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: Color(0xFF6BAE8E), fontSize: 12),
+          labelStyle: const TextStyle(color: Color(0xFF9E9E9E), fontSize: 12),
           border: InputBorder.none,
           isDense: true,
           contentPadding: const EdgeInsets.symmetric(vertical: 8),

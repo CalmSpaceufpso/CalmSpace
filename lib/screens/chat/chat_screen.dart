@@ -95,7 +95,7 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             // ── Offline banner (T4) ───────────────────────────────────────────
             Consumer<ChatProvider>(
-              builder: (_, prov, __) => prov.isOffline
+              builder: (_, prov, _) => prov.isOffline
                   ? _OfflineBanner(onDismiss: prov.clearOfflineFlag)
                   : const SizedBox.shrink(),
             ),
@@ -109,7 +109,7 @@ class _ChatScreenState extends State<ChatScreen> {
             // ── Message list (T2 real-time stream) ────────────────────────────
             Expanded(
               child: Consumer<ChatProvider>(
-                builder: (_, prov, __) {
+                builder: (_, prov, _) {
                   if (prov.error != null && prov.messages.isEmpty) {
                     return _ErrorState(error: prov.error!);
                   }
@@ -205,7 +205,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Consumer<ChatProvider>(
-                  builder: (_, prov, __) {
+                  builder: (_, prov, _) {
                     final label = prov.isSending
                         ? 'Enviando...'
                         : prov.isOffline
@@ -443,11 +443,15 @@ class _DateDivider extends StatelessWidget {
     final now = DateTime.now();
     if (date.year == now.year &&
         date.month == now.month &&
-        date.day == now.day) return 'Hoy';
+        date.day == now.day) {
+      return 'Hoy';
+    }
     final yesterday = now.subtract(const Duration(days: 1));
     if (date.year == yesterday.year &&
         date.month == yesterday.month &&
-        date.day == yesterday.day) return 'Ayer';
+        date.day == yesterday.day) {
+      return 'Ayer';
+    }
     return DateFormat('d MMM yyyy', 'es').format(date);
   }
 

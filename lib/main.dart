@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/date_symbol_data_local.dart'; // Añadido para intl
 
 import 'firebase_options.dart';
 import 'services/notification_service.dart';
@@ -13,11 +14,14 @@ import 'screens/home_screen.dart';
 import 'screens/profile/view_profile_screen.dart';
 import 'screens/availability/manage_availability_screen.dart';
 import 'screens/psychologists/psychologist_catalog_screen.dart';
-import 'screens/admin/psychologist_approval_screen.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Inicializar locale para que intl pueda formatear fechas en español ('es')
+  await initializeDateFormatting('es', null);
+
   bool firestoreReady = false;
   try {
     await Firebase.initializeApp(
@@ -141,7 +145,7 @@ class AuthGate extends StatelessWidget {
 
 class _PendingScreen extends StatelessWidget {
   final bool rejected;
-  const _PendingScreen({super.key, this.rejected = false});
+  const _PendingScreen({this.rejected = false});
 
   @override
   Widget build(BuildContext context) {

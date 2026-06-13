@@ -383,7 +383,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Activar mensajes de apoyo', style: TextStyle(fontWeight: FontWeight.w600)),
                         value: tempEnabled,
-                        activeColor: const Color(0xFF2B5BFF),
+                        activeThumbColor: const Color(0xFF2B5BFF),
                         onChanged: (val) => setModalState(() => tempEnabled = val),
                       ),
                       
@@ -421,8 +421,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             checkmarkColor: const Color(0xFF2B5BFF),
                             onSelected: (selected) {
                               setModalState(() {
-                                if (selected) tempTimes.add(t);
-                                else tempTimes.remove(t);
+                                if (selected) {
+                                  tempTimes.add(t);
+                                } else {
+                                  tempTimes.remove(t);
+                                }
                               });
                             },
                           )).toList(),
@@ -755,142 +758,178 @@ class _HomeTab extends StatelessWidget {
 
           const SizedBox(height: 24),
 
-          // ── SELECTOR DE ÁNIMO (REDISEÑADO) ──
+          // ── SELECTOR DE ÁNIMO (MOCKUP 2) ──
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
+                  color: Colors.black.withOpacity(0.04),
                   blurRadius: 24,
                   offset: const Offset(0, 8),
                 ),
               ],
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // Header
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Row(children: [
+              // CABECERA
+              Row(
+                children: [
                   Container(
-                    padding: const EdgeInsets.all(9),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF2B5BFF), Color(0xFF6B8FFF)],
-                        begin: Alignment.topLeft, end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
+                      color: const Color(0xFF3B5BFE),
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Icon(Icons.favorite_rounded, color: Colors.white, size: 16),
+                    child: const Icon(Icons.favorite_rounded, color: Colors.white, size: 20),
                   ),
-                  const SizedBox(width: 10),
-                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Text('¿Cómo te sientes?',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _textMain)),
-                    Text(
-                      todayCount > 0
-                          ? '$todayCount registro${todayCount > 1 ? "s" : ""} hoy'
-                          : 'Toca para registrar',
-                      style: TextStyle(fontSize: 11, color: _textSub),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '¿Cómo te sientes hoy?',
+                          style: TextStyle(
+                            fontFamily: 'Outfit', // Usando fuente genérica o importada
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0D1B3E),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Registra tu estado de ánimo',
+                          style: TextStyle(fontFamily: 'Outfit', fontSize: 12, color: Color(0xFF8A94A6)),
+                        ),
+                      ],
                     ),
-                  ]),
-                ]),
-                // Ver historial
-                GestureDetector(
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const MoodHistoryScreen())),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [_primary.withOpacity(0.12), _primary.withOpacity(0.06)],
-                      ),
-                      borderRadius: BorderRadius.circular(24)),
-                    child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(Icons.bar_chart_rounded, color: _primary, size: 15),
-                      SizedBox(width: 5),
-                      Text('Historial', style: TextStyle(
-                          fontSize: 12, color: _primary, fontWeight: FontWeight.w700)),
-                    ]),
                   ),
-                ),
-              ]),
+                  // Botón Historial
+                  GestureDetector(
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MoodHistoryScreen())),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0F2FF),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.bar_chart_rounded, color: Color(0xFF3B5BFE), size: 14),
+                          SizedBox(width: 4),
+                          Text(
+                            'Historial',
+                            style: TextStyle(fontFamily: 'Outfit', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF3B5BFE)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                ],
+              ),
+              const SizedBox(height: 24),
 
-              const SizedBox(height: 20),
-
-              // ── Íconos de ánimo — SIEMPRE CON COLOR ──
-              Row(mainAxisAlignment: MainAxisAlignment.spaceAround,
+              // SELECTOR DE EMOCIONES
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: List.generate(moods.length, (i) {
                   final m = moods[i];
-                  final isAvg = todayAverage != null && todayAverage!.round() == i;
+                  final selected = moodIndex == i || (todayAverage != null && todayAverage!.round() == i);
+                  
+                  // Helper function to get specific colors similar to the Mockup
+                  Color getBgColor(int idx) {
+                    switch (idx) {
+                      case 0: return const Color(0xFFFEF2F2);
+                      case 1: return const Color(0xFFFFF7ED);
+                      case 2: return const Color(0xFFFFFBEB);
+                      case 3: return const Color(0xFFF0FDF4);
+                      case 4: return const Color(0xFFEEF2FF);
+                      default: return Colors.grey.shade100;
+                    }
+                  }
+                  Color getMainColor(int idx) {
+                    switch (idx) {
+                      case 0: return const Color(0xFFEF4444);
+                      case 1: return const Color(0xFFF97316);
+                      case 2: return const Color(0xFFF59E0B);
+                      case 3: return const Color(0xFF22C55E);
+                      case 4: return const Color(0xFF3B5BFE);
+                      default: return Colors.grey;
+                    }
+                  }
+
+                  final bgColor = getBgColor(i);
+                  final mainColor = getMainColor(i);
+
                   return GestureDetector(
                     onTap: savingMood ? null : () => onMoodTap(i),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOutBack,
-                      width: 60,
-                      height: 95, // Altura fija para que todos midan lo mismo
-                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-                      decoration: BoxDecoration(
-                        gradient: isAvg ? LinearGradient(
-                          colors: [m.color.withOpacity(0.18), m.light.withOpacity(0.35)],
-                          begin: Alignment.topLeft, end: Alignment.bottomRight,
-                        ) : null,
-                        color: isAvg ? null : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(18),
-                        border: isAvg
-                            ? Border.all(color: m.color.withOpacity(0.5), width: 2.5)
-                            : Border.all(color: Colors.grey.shade200, width: 1),
-                        boxShadow: isAvg ? [
-                          BoxShadow(
-                            color: m.color.withOpacity(0.25),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ] : [],
-                      ),
-                      child: Column(children: [
-                        // Ícono con fondo circular coloreado
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
                         AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          width: isAvg ? 42 : 38,
-                          height: isAvg ? 42 : 38,
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOut,
+                          width: MediaQuery.of(context).size.width * 0.155,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: isAvg
-                                  ? [m.color, m.color.withOpacity(0.7)]
-                                  : [m.color.withOpacity(0.12), m.light.withOpacity(0.25)],
-                              begin: Alignment.topLeft, end: Alignment.bottomRight,
+                            color: selected ? Colors.white : bgColor,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: selected ? const Color(0xFF22C55E) : Colors.transparent,
+                              width: 2,
                             ),
-                            shape: BoxShape.circle,
-                            boxShadow: isAvg ? [
-                              BoxShadow(
-                                color: m.color.withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
+                            boxShadow: selected ? [
+                              BoxShadow(color: const Color(0xFF22C55E).withOpacity(0.2), blurRadius: 12, offset: const Offset(0, 4))
                             ] : [],
                           ),
-                          child: Icon(m.icon,
-                            color: isAvg ? Colors.white : m.color,
-                            size: isAvg ? 24 : 20),
+                          child: Column(
+                            children: [
+                              Container(
+                                width: 40, height: 40,
+                                decoration: BoxDecoration(
+                                  color: selected ? bgColor : Colors.white.withOpacity(0.5),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    m.icon,
+                                    color: mainColor,
+                                    size: 24,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                m.label,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 10,
+                                  color: selected ? const Color(0xFF22C55E) : const Color(0xFF6B7280),
+                                  fontWeight: selected ? FontWeight.bold : FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 6),
-                        Text(m.label,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: isAvg ? FontWeight.w800 : FontWeight.w500,
-                            color: isAvg ? m.color : _textSub),
-                          maxLines: 2, overflow: TextOverflow.ellipsis),
-                      ]),
+                        if (selected)
+                          Positioned(
+                            top: -6,
+                            right: -6,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(color: Color(0xFF22C55E), shape: BoxShape.circle),
+                              child: const Icon(Icons.check_rounded, color: Colors.white, size: 10),
+                            ),
+                          ),
+                      ],
                     ),
                   );
                 }),
               ),
-
-              // ── Guardando... con indicador bonito ──
+              
               if (savingMood) ...[
                 const SizedBox(height: 16),
                 Container(
@@ -913,172 +952,106 @@ class _HomeTab extends StatelessWidget {
                 ),
               ],
 
-              // ── Confirmación: ¡Registrado! ──
-              if (showCheck && !savingMood && todayCount > 0) ...[
-                const SizedBox(height: 16),
-                ScaleTransition(
-                  scale: checkAnim,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          MoodData.moods[todayAverage!.round().clamp(0, 4)].color.withOpacity(0.12),
-                          MoodData.moods[todayAverage!.round().clamp(0, 4)].light.withOpacity(0.2),
+              const SizedBox(height: 24),
+              
+              // BANNER MOTIVACIONAL INTERNO
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4), // Verde muy claro
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text('¡Vas en crecimiento!', style: TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.w800, fontSize: 13)),
+                              SizedBox(width: 4),
+                              Text('🌱', style: TextStyle(fontSize: 12)),
+                            ],
+                          ),
+                          SizedBox(height: 4),
+                          Text('Tu bienestar ha mejorado 12%\nrespecto a la semana pasada.', style: TextStyle(color: Color(0xFF6B7280), fontSize: 11, height: 1.3)),
                         ],
                       ),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: MoodData.moods[todayAverage!.round().clamp(0, 4)].color.withOpacity(0.25),
-                      ),
                     ),
-                    child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Container(
-                        width: 24, height: 24,
-                        decoration: BoxDecoration(
-                          color: MoodData.moods[todayAverage!.round().clamp(0, 4)].color,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.check_rounded, color: Colors.white, size: 16),
-                      ),
-                      const SizedBox(width: 10),
-                      Text('¡Registrado!',
-                        style: TextStyle(fontSize: 13,
-                          color: MoodData.moods[todayAverage!.round().clamp(0, 4)].color,
-                          fontWeight: FontWeight.w700)),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${MoodData.moods[todayAverage!.round().clamp(0, 4)].label}',
-                        style: TextStyle(fontSize: 12,
-                          color: MoodData.moods[todayAverage!.round().clamp(0, 4)].color.withOpacity(0.7),
-                          fontWeight: FontWeight.w500),
-                      ),
-                    ]),
-                  ),
-                ),
-              ],
-
-              // ── Resumen del día (cuando NO se acaba de registrar) ──
-              if (todayCount > 0 && !savingMood && !showCheck) ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        MoodData.moods[todayAverage!.round().clamp(0, 4)].light.withOpacity(0.25),
-                        MoodData.moods[todayAverage!.round().clamp(0, 4)].color.withOpacity(0.06),
-                      ],
-                      begin: Alignment.topLeft, end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: MoodData.moods[todayAverage!.round().clamp(0, 4)].color.withOpacity(0.15),
-                    ),
-                  ),
-                  child: Row(children: [
-                    Container(
-                      width: 42, height: 42,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            MoodData.moods[todayAverage!.round().clamp(0, 4)].color,
-                            MoodData.moods[todayAverage!.round().clamp(0, 4)].color.withOpacity(0.7),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(13),
-                        boxShadow: [BoxShadow(
-                          color: MoodData.moods[todayAverage!.round().clamp(0, 4)].color.withOpacity(0.3),
-                          blurRadius: 8, offset: const Offset(0, 3),
-                        )],
-                      ),
-                      child: Icon(
-                        MoodData.moods[todayAverage!.round().clamp(0, 4)].icon,
-                        color: Colors.white, size: 22),
+                    // Gráfica mock (línea simple)
+                    SizedBox(
+                      width: 60, height: 30,
+                      child: CustomPaint(painter: _MiniTrendLinePainterMock()),
                     ),
                     const SizedBox(width: 12),
-                    Expanded(child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          todayCount == 1
-                              ? 'Tu estado de hoy'
-                              : 'Promedio de hoy · $todayCount registros',
-                          style: const TextStyle(fontSize: 10, color: _textSub, fontWeight: FontWeight.w500),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          MoodData.moods[todayAverage!.round().clamp(0, 4)].label,
-                          style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold,
-                            color: MoodData.moods[todayAverage!.round().clamp(0, 4)].color),
-                        ),
-                      ],
-                    )),
-                    Icon(Icons.check_circle_rounded,
-                        color: MoodData.moods[todayAverage!.round().clamp(0, 4)].color.withOpacity(0.4),
-                        size: 22),
-                  ]),
-                ),
-              ],
-              
-              // ── Botón para cambiar hora de recordatorio ──
-              const SizedBox(height: 12),
-              Center(
-                child: TextButton.icon(
-                  onPressed: () async {
-                    final timeParts = moodReminderTime.split(':');
-                    final initialHour = int.tryParse(timeParts.isNotEmpty ? timeParts[0] : '20') ?? 20;
-                    final initialMin = int.tryParse(timeParts.length > 1 ? timeParts[1] : '0') ?? 0;
-                    
-                    final picked = await showTimePicker(
-                      context: context,
-                      initialTime: TimeOfDay(hour: initialHour, minute: initialMin),
-                      helpText: 'Cambiar hora de recordatorio',
-                      builder: (ctx, child) => Theme(
-                        data: Theme.of(ctx).copyWith(
-                          colorScheme: const ColorScheme.light(primary: Color(0xFF2563EB)),
-                        ),
-                        child: child!,
-                      ),
-                    );
-                    if (picked != null) {
-                      final newTime = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
-                      onChangeReminderTime(newTime);
-                      final uid = FirebaseAuth.instance.currentUser?.uid;
-                      if (uid != null) {
-                        await FirebaseFirestore.instance.collection('users').doc(uid).set(
-                          {'moodReminderTime': newTime},
-                          SetOptions(merge: true),
-                        );
-                      }
-                      await NotificationService.instance.scheduleDailyMoodReminder(
-                        hour: picked.hour,
-                        minute: picked.minute,
-                        skipToday: todayCount > 0,
-                      );
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Recordatorio actualizado a las $newTime ⏰'),
-                            backgroundColor: const Color(0xFF6BAE8E),
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  icon: const Icon(Icons.notifications_active_outlined, size: 16, color: Color(0xFF9E9E9E)),
-                  label: Text('Recordatorio: $moodReminderTime', 
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF9E9E9E), fontWeight: FontWeight.w500)),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    backgroundColor: Colors.grey.shade50,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(12)),
+                      child: const Text('+12%', style: TextStyle(color: Color(0xFF15803D), fontWeight: FontWeight.w800, fontSize: 11)),
+                    )
+                  ],
                 ),
               ),
+              
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Divider(color: Color(0xFFF0F2F5), thickness: 1),
+              ),
+              
+              // RECORDATORIO
+              Row(
+                children: [
+                  const Icon(Icons.notifications_none_rounded, color: Color(0xFF8A94A6), size: 18),
+                  const SizedBox(width: 8),
+                  Text('Recordatorio diario: $moodReminderTime', style: const TextStyle(fontFamily: 'Outfit', color: Color(0xFF6B7280), fontSize: 13, fontWeight: FontWeight.w500)),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () async {
+                      final timeParts = moodReminderTime.split(':');
+                      final initialHour = int.tryParse(timeParts.isNotEmpty ? timeParts[0] : '20') ?? 20;
+                      final initialMin = int.tryParse(timeParts.length > 1 ? timeParts[1] : '0') ?? 0;
+                      
+                      final picked = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay(hour: initialHour, minute: initialMin),
+                        helpText: 'Cambiar hora de recordatorio',
+                        builder: (ctx, child) => Theme(
+                          data: Theme.of(ctx).copyWith(
+                            colorScheme: const ColorScheme.light(primary: Color(0xFF2563EB)),
+                          ),
+                          child: child!,
+                        ),
+                      );
+                      if (picked != null) {
+                        final newTime = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                        onChangeReminderTime(newTime);
+                        final uid = FirebaseAuth.instance.currentUser?.uid;
+                        if (uid != null) {
+                          await FirebaseFirestore.instance.collection('users').doc(uid).set(
+                            {'moodReminderTime': newTime},
+                            SetOptions(merge: true),
+                          );
+                        }
+                        await NotificationService.instance.scheduleDailyMoodReminder(
+                          hour: picked.hour,
+                          minute: picked.minute,
+                          skipToday: todayCount > 0,
+                        );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Recordatorio actualizado a las $newTime ⏰'),
+                              backgroundColor: const Color(0xFF6BAE8E),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    child: const Text('Editar >', style: TextStyle(fontFamily: 'Outfit', color: Color(0xFF3B5BFE), fontSize: 13, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              )
             ]),
           ),
 
@@ -1430,7 +1403,7 @@ class _MotivationalCarouselState extends State<_MotivationalCarousel> {
                     Image.network(
                       msg.imageUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+                      errorBuilder: (_, _, _) => Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [msg.accentColor.withOpacity(0.8), msg.accentColor.withOpacity(0.4)],
@@ -2453,3 +2426,26 @@ class _AdminStatCard extends StatelessWidget {
   }
 }
 
+class _MiniTrendLinePainterMock extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF22C55E)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final path = Path();
+    path.moveTo(0, size.height);
+    path.lineTo(size.width * 0.3, size.height * 0.6);
+    path.lineTo(size.width * 0.6, size.height * 0.8);
+    path.lineTo(size.width, 0);
+
+    canvas.drawPath(path, paint);
+
+    canvas.drawCircle(Offset(size.width, 0), 3, paint..style = PaintingStyle.fill);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}

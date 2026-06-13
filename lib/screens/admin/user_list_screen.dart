@@ -132,7 +132,7 @@ class _UserListViewState extends State<_UserListView> {
 
           // ── Summary bar ──────────────────────────────────────────────────
           Consumer<UserListProvider>(
-            builder: (_, prov, __) {
+            builder: (_, prov, _) {
               if (prov.isLoading || prov.error != null) {
                 return const SizedBox.shrink();
               }
@@ -143,7 +143,7 @@ class _UserListViewState extends State<_UserListView> {
           // ── List ─────────────────────────────────────────────────────────
           Expanded(
             child: Consumer<UserListProvider>(
-              builder: (_, prov, __) {
+              builder: (_, prov, _) {
                 if (prov.isLoading) return _LoadingState();
                 if (prov.error != null) return _ErrorState(error: prov.error!);
                 if (prov.filteredUsers.isEmpty) {
@@ -193,7 +193,7 @@ class _UserListViewState extends State<_UserListView> {
                 fontSize: 18),
           ),
           Consumer<UserListProvider>(
-            builder: (_, prov, __) => Text(
+            builder: (_, prov, _) => Text(
               prov.isLoading ? 'Cargando...' : '${prov.users.length} usuarios en total',
               style: const TextStyle(
                   color: _textSub,
@@ -205,7 +205,7 @@ class _UserListViewState extends State<_UserListView> {
       ),
       actions: [
         Consumer<UserListProvider>(
-          builder: (_, prov, __) {
+          builder: (_, prov, _) {
             final hasFilters = prov.roleFilter.isNotEmpty ||
                 prov.searchQuery.isNotEmpty;
             if (!hasFilters) return const SizedBox.shrink();
@@ -252,7 +252,7 @@ class _SearchBar extends StatelessWidget {
               color: Color(0xFF8A94A6), size: 20),
           suffixIcon: ValueListenableBuilder<TextEditingValue>(
             valueListenable: controller,
-            builder: (_, val, __) => val.text.isNotEmpty
+            builder: (_, val, _) => val.text.isNotEmpty
                 ? IconButton(
                     icon: const Icon(Icons.close_rounded,
                         size: 18, color: Color(0xFF8A94A6)),
@@ -289,7 +289,7 @@ class _RoleFilterRow extends StatelessWidget {
       color: Colors.white,
       padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
       child: Consumer<UserListProvider>(
-        builder: (_, prov, __) {
+        builder: (_, prov, _) {
           return SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -444,7 +444,7 @@ class _UserList extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       itemCount: users.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (_, i) => _UserCard(user: users[i]),
     );
   }
@@ -641,7 +641,7 @@ class _UserCard extends StatelessWidget {
     final isAdmin     = user.role == 'Admin';
 
     return Consumer<UserListProvider>(
-      builder: (_, prov, __) {
+      builder: (_, prov, _) {
         final acting = prov.isActingOn(user.uid);
         return AnimatedContainer(
           duration: const Duration(milliseconds: 300),
