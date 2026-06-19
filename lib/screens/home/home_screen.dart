@@ -307,83 +307,94 @@ class _HomeScreenState extends State<HomeScreen>
 
           // SELECTOR DE EMOCIONES
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(_moods.length, (i) {
               final selected = _selectedMood == i;
               final colorInfo = _getMoodColorInfo(i);
-              
-              return GestureDetector(
-                onTap: () {
-                  setState(() => _selectedMood = i);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${_moods[i]['label']} registrado'),
-                      backgroundColor: colorInfo.main,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                },
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                      width: MediaQuery.of(context).size.width * 0.155,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        color: selected ? Colors.white : colorInfo.bg,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: selected ? const Color(0xFF22C55E) : Colors.transparent,
-                          width: 2,
+              final isLast = i == _moods.length - 1;
+
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(right: isLast ? 0 : 6),
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() => _selectedMood = i);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${_moods[i]['label']} registrado'),
+                          backgroundColor: colorInfo.main,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          duration: const Duration(seconds: 2),
                         ),
-                        boxShadow: selected ? [
-                          BoxShadow(color: const Color(0xFF22C55E).withOpacity(0.2), blurRadius: 12, offset: const Offset(0, 4))
-                        ] : [],
-                      ),
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 40, height: 40,
-                            decoration: BoxDecoration(
-                              color: selected ? colorInfo.bg : Colors.white.withOpacity(0.5),
-                              shape: BoxShape.circle,
+                      );
+                    },
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOut,
+                          height: 88,
+                          decoration: BoxDecoration(
+                            color: selected ? Colors.white : colorInfo.bg,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: selected ? const Color(0xFF22C55E) : Colors.transparent,
+                              width: 2,
                             ),
-                            child: Center(
-                              child: Icon(
-                                _moods[i]['icon'] as IconData,
-                                color: colorInfo.main,
-                                size: 24,
+                            boxShadow: selected ? [
+                              BoxShadow(color: const Color(0xFF22C55E).withOpacity(0.2), blurRadius: 12, offset: const Offset(0, 4))
+                            ] : [],
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 36, height: 36,
+                                decoration: BoxDecoration(
+                                  color: selected ? colorInfo.bg : Colors.white.withOpacity(0.5),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    _moods[i]['icon'] as IconData,
+                                    color: colorInfo.main,
+                                    size: 20,
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(height: 6),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 2),
+                                child: Text(
+                                  _moods[i]['label'] as String,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 9,
+                                    color: selected ? const Color(0xFF22C55E) : const Color(0xFF6B7280),
+                                    fontWeight: selected ? FontWeight.bold : FontWeight.w600,
+                                    height: 1.2,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _moods[i]['label'] as String,
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.outfit(
-                              fontSize: 10,
-                              color: selected ? const Color(0xFF22C55E) : const Color(0xFF6B7280),
-                              fontWeight: selected ? FontWeight.bold : FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (selected)
-                      Positioned(
-                        top: -6,
-                        right: -6,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(color: Color(0xFF22C55E), shape: BoxShape.circle),
-                          child: const Icon(Icons.check_rounded, color: Colors.white, size: 10),
                         ),
-                      ),
-                  ],
+                        if (selected)
+                          Positioned(
+                            top: -5,
+                            right: -5,
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: const BoxDecoration(color: Color(0xFF22C55E), shape: BoxShape.circle),
+                              child: const Icon(Icons.check_rounded, color: Colors.white, size: 9),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               );
             }),
@@ -443,7 +454,31 @@ class _HomeScreenState extends State<HomeScreen>
               const SizedBox(width: 8),
               Text('Recordatorio diario: 20:00', style: GoogleFonts.outfit(color: const Color(0xFF6B7280), fontSize: 13, fontWeight: FontWeight.w500)),
               const Spacer(),
-              Text('Editar >', style: GoogleFonts.outfit(color: const Color(0xFF3B5BFE), fontSize: 13, fontWeight: FontWeight.bold)),
+              GestureDetector(
+                onTap: () {},
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEEF2FF),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.edit_rounded, color: Color(0xFF3B5BFE), size: 13),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Editar',
+                        style: GoogleFonts.outfit(
+                          color: const Color(0xFF3B5BFE),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           )
         ],

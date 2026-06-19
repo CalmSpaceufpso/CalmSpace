@@ -48,6 +48,8 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   timezone: ^0.10.0
   fl_chart: ^1.2.0
+  cloud_firestore_platform_interface: any
+  firebase_auth_platform_interface: any
 
 dev_dependencies:
   flutter_test:
@@ -67,8 +69,6 @@ dev_dependencies:
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
-  cloud_firestore_platform_interface: any
-  firebase_auth_platform_interface: any
 flutter:
 
   # The following line ensures that the Material Icons font is

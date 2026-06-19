@@ -177,8 +177,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       if (image != null) {
         final Uint8List imageBytes = await image.readAsBytes();
+
+        // Firestore tiene límite de 1 MB por documento.
+        // La imagen base64 ocupa ~1.37x su tamaño original, así que limitamos a 750 KB.
+        if (imageBytes.lengthInBytes > 750 * 1024) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('La imagen es demasiado grande. Elegí una más pequeña.'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+          return;
+        }
+
         final String base64String = base64Encode(imageBytes);
-        
         setState(() {
           _photoUrl = 'data:image/jpeg;base64,$base64String';
         });
@@ -518,7 +532,7 @@ class _DropdownField extends StatelessWidget {
         ],
       ),
       child: DropdownButtonFormField<String>(
-        initialValue: value,
+        value: value,
         isExpanded: true,
         decoration: InputDecoration(
           labelText: label,
