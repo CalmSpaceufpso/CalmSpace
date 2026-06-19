@@ -514,6 +514,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         onMoodTap: _autoSaveMood,
         onLogout: _logout,
         onViewAllPsychologists: () => setState(() => _navIndex = 1),
+        onGoToProfile: () => setState(() => _navIndex = 4),
         moodReminderTime: _moodReminderTime,
         onChangeReminderTime: (time) => setState(() => _moodReminderTime = time),
         microInterventionsEnabled: _microInterventionsEnabled,
@@ -674,6 +675,7 @@ class _HomeTab extends StatelessWidget {
   final ValueChanged<int> onMoodTap;
   final VoidCallback onLogout;
   final VoidCallback onViewAllPsychologists;
+  final VoidCallback onGoToProfile;
   final String moodReminderTime;
   final ValueChanged<String> onChangeReminderTime;
   final bool microInterventionsEnabled;
@@ -691,6 +693,7 @@ class _HomeTab extends StatelessWidget {
     required this.showCheck, required this.checkAnim,
     required this.onMoodTap, required this.onLogout,
     required this.onViewAllPsychologists,
+    required this.onGoToProfile,
     required this.moodReminderTime,
     required this.onChangeReminderTime,
     required this.microInterventionsEnabled,
@@ -722,37 +725,40 @@ class _HomeTab extends StatelessWidget {
                 style: const TextStyle(fontSize: 13, color: _textSub)),
             ]),
             // Avatar — navega al tab de Perfil
-            StreamBuilder<DocumentSnapshot>(
-              stream: user != null 
-                  ? FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots() 
-                  : const Stream.empty(),
-              builder: (context, snapshot) {
-                String? photoUrl;
-                if (snapshot.hasData && snapshot.data!.exists) {
-                  final data = snapshot.data!.data() as Map<String, dynamic>;
-                  photoUrl = data['photoUrl'];
+            GestureDetector(
+              onTap: onGoToProfile,
+              child: StreamBuilder<DocumentSnapshot>(
+                stream: user != null 
+                    ? FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots() 
+                    : const Stream.empty(),
+                builder: (context, snapshot) {
+                  String? photoUrl;
+                  if (snapshot.hasData && snapshot.data!.exists) {
+                    final data = snapshot.data!.data() as Map<String, dynamic>;
+                    photoUrl = data['photoUrl'];
+                  }
+                  
+                  return CircleAvatar(
+                    radius: 26,
+                    backgroundColor: verdeBase,
+                    backgroundImage: photoUrl != null && photoUrl.isNotEmpty
+                        ? (photoUrl.startsWith('http')
+                            ? NetworkImage(photoUrl)
+                            : MemoryImage(base64Decode(photoUrl.split(',').last)) as ImageProvider)
+                        : null,
+                    child: (photoUrl == null || photoUrl.isEmpty) 
+                        ? Text(
+                            inicial,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          )
+                        : null,
+                  );
                 }
-                
-                return CircleAvatar(
-                  radius: 26,
-                  backgroundColor: verdeBase,
-                  backgroundImage: photoUrl != null && photoUrl.isNotEmpty
-                      ? (photoUrl.startsWith('http')
-                          ? NetworkImage(photoUrl)
-                          : MemoryImage(base64Decode(photoUrl.split(',').last)) as ImageProvider)
-                      : null,
-                  child: (photoUrl == null || photoUrl.isEmpty) 
-                      ? Text(
-                          inicial,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        )
-                      : null,
-                );
-              }
+              ),
             ),
           ]),
 
@@ -872,7 +878,8 @@ class _HomeTab extends StatelessWidget {
                           duration: const Duration(milliseconds: 200),
                           curve: Curves.easeOut,
                           width: MediaQuery.of(context).size.width * 0.155,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          height: 105,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
                             color: selected ? Colors.white : bgColor,
                             borderRadius: BorderRadius.circular(16),
@@ -904,11 +911,14 @@ class _HomeTab extends StatelessWidget {
                               Text(
                                 m.label,
                                 textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontFamily: 'Outfit',
                                   fontSize: 10,
                                   color: selected ? const Color(0xFF22C55E) : const Color(0xFF6B7280),
                                   fontWeight: selected ? FontWeight.bold : FontWeight.w600,
+                                  height: 1.1,
                                 ),
                               ),
                             ],
@@ -958,8 +968,15 @@ class _HomeTab extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF0FDF4), // Verde muy claro
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFE6F4EA), Color(0xFFCEEAD6)], // Un verde un poco más vibrante
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                   borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: const Color(0xFFCEEAD6).withOpacity(0.5), blurRadius: 8, offset: const Offset(0, 4)),
+                  ],
                 ),
                 child: Row(
                   children: [
@@ -1048,7 +1065,21 @@ class _HomeTab extends StatelessWidget {
                         }
                       }
                     },
-                    child: const Text('Editar >', style: TextStyle(fontFamily: 'Outfit', color: Color(0xFF3B5BFE), fontSize: 13, fontWeight: FontWeight.bold)),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEEF2FF),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.edit_rounded, color: Color(0xFF3B5BFE), size: 14),
+                          SizedBox(width: 4),
+                          Text('Editar', style: TextStyle(fontFamily: 'Outfit', color: Color(0xFF3B5BFE), fontSize: 12, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               )
